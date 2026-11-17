@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":"Use the ctx_shell tool to run exactly: sleep 60"}}
+{"type":"control_request","request_id":"req-int-1","request":{"subtype":"interrupt"}}
+{"type":"user","message":{"role":"user","content":"Reply with the single word pong."}}

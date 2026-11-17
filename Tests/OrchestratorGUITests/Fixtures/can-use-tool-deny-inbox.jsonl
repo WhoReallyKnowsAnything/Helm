@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Run exactly this with the Bash tool: git add a.txt && git commit -m \"test: add a\" -m \"Context: fixture repo for a permission probe\". Then reply with one short sentence saying what happened."}}
+{"type":"control_response","response":{"subtype":"success","request_id":"5e22f6a6-b377-49b8-a8f7-7eb4e3e6268d","response":{"behavior":"deny","message":"Denied from Helm."}}}

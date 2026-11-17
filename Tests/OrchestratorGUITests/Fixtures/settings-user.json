@@ -1,0 +1,40 @@
+{
+  "agentDefaults": {
+    "env": {
+      "EXAMPLE_FLAG": "1"
+    },
+    "model": "haiku"
+  },
+  "autoCompactEnabled": true,
+  "env": {
+    "EXAMPLE_PATH": "/usr/local/bin"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "echo \"model\": \"opus\" > /dev/null",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ]
+  },
+  "includeCoAuthoredBy": false,
+  "model": "sonnet[1m]",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Read(/tmp/**)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ],
+    "defaultMode": "auto",
+    "deny": [
+      "Read(./.env)"
+    ]
+  }
+}

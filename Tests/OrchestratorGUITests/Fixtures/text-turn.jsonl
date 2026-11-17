@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init","session_id":"8aae1cc6-1d3b-4854-b05d-fe3687c64b99","model":"haiku","slash_commands":["context","model","effort","compact","config","agents","clear","review","superpowers:brainstorm","deploy-check"],"skills":["review","superpowers:brainstorm","deploy-check"],"tools":["Read","Edit","Write"]}
+{"type":"user","message":{"role":"user","content":"Reply with exactly: hello there"},"parent_tool_use_id":null,"session_id":"8aae1cc6-1d3b-4854-b05d-fe3687c64b99","isReplay":true}
+{"type":"assistant","message":{"id":"msg_011CgmPApT6RERL1brihWSne","role":"assistant","model":"haiku","content":[{"type":"text","text":"hello there"}]},"parent_tool_use_id":null,"session_id":"8aae1cc6-1d3b-4854-b05d-fe3687c64b99"}
+{"type":"result","subtype":"success","is_error":false,"num_turns":1,"result":"hello there","session_id":"8aae1cc6-1d3b-4854-b05d-fe3687c64b99","stop_reason":"end_turn"}
+{"type":"future_event","payload":{"note":"unknown type"}}

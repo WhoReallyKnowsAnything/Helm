@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"<command-message>cad-notion-pull</command-message>\n<command-name>/cad-notion-pull</command-name>"},"parent_tool_use_id":null,"isReplay":true}
+{"type":"user","message":{"role":"user","content":"<command-message>cad-notion-pull</command-message>\n<command-name>/cad-notion-pull</command-name>\n<command-args>the open tasks</command-args>"},"parent_tool_use_id":null,"isReplay":true}

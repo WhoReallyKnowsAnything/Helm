@@ -1,0 +1,33 @@
+{
+  "beats": [
+    { "id": "intro", "headline": "", "sentences": [
+      { "text": "Meet {name}.", "cue": "logo" } ] },
+    { "id": "sessions", "headline": "Every Claude session. One window.", "sentences": [
+      { "text": "Run every Claude Code session from one native Mac window.", "cue": "sidebar" },
+      { "text": "One orchestrator for each project, with live status for every worker.", "cue": "tree" } ] },
+    { "id": "worktrees", "headline": "Workers in their own worktrees.", "sentences": [
+      { "text": "Each worker gets its own git worktree, so parallel work never collides.", "cue": "worktrees" } ] },
+    { "id": "chat", "headline": "Talk to any session.", "sentences": [
+      { "text": "Chat with any session, right in the app.", "cue": "type" },
+      { "text": "There is no terminal to manage.", "cue": "code" } ] },
+    { "id": "holds", "headline": "Nothing ships without you.", "sentences": [
+      { "text": "When a worker wants to commit or run a tool, a card appears.", "cue": "card" },
+      { "text": "Review it, then approve with one click.", "cue": "click" } ] },
+    { "id": "flow1", "headline": "Plan. Execute. Verify. In one place.", "sentences": [
+      { "text": "The Cadence workflow lives in the same window.", "cue": "shell" },
+      { "text": "The Board shows every phase and the next step.", "cue": "board" },
+      { "text": "Context captures decisions and acceptance criteria.", "cue": "context" } ] },
+    { "id": "flow2", "headline": "Plan. Execute. Verify. In one place.", "sentences": [
+      { "text": "Plan groups the work into waves.", "cue": "plan" },
+      { "text": "Execute shows live progress as each wave fills in.", "cue": "execute" } ] },
+    { "id": "flow3", "headline": "Plan. Execute. Verify. In one place.", "sentences": [
+      { "text": "Verify walks you through the acceptance tests.", "cue": "verify" },
+      { "text": "The run record keeps a log of every step.", "cue": "run" },
+      { "text": "Then milestone audits the cycle, and lands it.", "cue": "milestone" } ] },
+    { "id": "editor", "headline": "Open any file. Right there.", "sentences": [
+      { "text": "Click a file link to open it in the built-in code editor.", "cue": "editor" } ] },
+    { "id": "outro", "headline": "", "sentences": [
+      { "text": "{name}.", "cue": "logo" },
+      { "text": "Built on Claude Code and Cadence.", "cue": "built" } ] }
+  ]
+}
