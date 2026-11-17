@@ -1,0 +1,49 @@
+#!/bin/bash
+# Template: install.sh replaces @ORCH_DIR@ with the absolute orchestration folder.
+# Body of the PermissionRequest permission-hold hook, moved out of settings.json so the
+# registered command holds no exec/$() for lean-ctx's shell check to refuse.
+G="@ORCH_DIR@/hooks/permission-hold.sh"
+B=${APPROVAL_HOOK_ALARM_SECS:-660}
+IN=$(cat)
+T=$(mktemp)
+W=
+if [ -x "$G" ]; then
+  printf %s "$IN" | perl -e "alarm shift; exec @ARGV" "$B" "$G" >"$T" 2>/dev/null
+  rc=$?
+  if [ $rc -eq 0 ]; then
+    if [ -s "$T" ]; then
+      node -e "(async()=>{let d=[];for await(let c of process.stdin)d.push(c);try{let b=JSON.parse(Buffer.concat(d)).hookSpecificOutput.decision.behavior;process.exit(String(b)===b&&b?0:1)}catch{process.exit(1)}})()" <"$T" 2>/dev/null && { cat "$T"; rm -f "$T"; exit 0; }
+      W=crashed
+    else
+      W=empty
+    fi
+  elif [ $rc -eq 142 ]; then
+    W=timed
+  else
+    W=crashed
+  fi
+else
+  W=missing
+fi
+rm -f "$T"
+C=$(printf %s "$IN" | node -e "(async()=>{let d=[];for await(let c of process.stdin)d.push(c);try{process.stdout.write(String(JSON.parse(Buffer.concat(d)).cwd||[]))}catch{}})()" 2>/dev/null)
+case "$C" in /*) ;; *) exit 0;; esac
+if . "${G%/*}/../lib/session-state.sh" 2>/dev/null; then
+  L=
+  d=$C
+  while :; do
+    if [ -e "$d/.git" ] && A=$(cd "$d" && live_worker_agent "$d" 2>/dev/null); then L=1; break; fi
+    [ "$d" = / ] && break
+    d=${d%/*}
+    d=${d:-/}
+  done
+  [ -n "$L" ] || exit 0
+else
+  case "$C" in */.claude/worktrees/*) ;; *) exit 0;; esac
+fi
+if [ "$W" = empty ] && [ -n "$L" ] && . "${G%/*}/../lib/question-stages.sh" 2>/dev/null && question_stage_allowed "$A" && [ "$(printf %s "$IN" | node -e "(async()=>{let d=[];for await(let c of process.stdin)d.push(c);try{process.stdout.write(String(JSON.parse(Buffer.concat(d)).tool_name||[]))}catch{}})()" 2>/dev/null)" = AskUserQuestion ]; then
+  exit 0
+fi
+case $W in missing) M="script is missing";; timed) M="timed out";; empty) M="returned no decision";; *) M="crashed or returned no valid decision";; esac
+printf "{\042hookSpecificOutput\042:{\042hookEventName\042:\042PermissionRequest\042,\042decision\042:{\042behavior\042:\042deny\042,\042message\042:\042The approval hold hook $M, so this call from a live worker is denied. Restore orchestration/hooks/permission-hold.sh and try again.\042}}}"
+exit 0

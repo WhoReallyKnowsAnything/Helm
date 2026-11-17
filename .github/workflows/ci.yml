@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shell-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tmux and jq
+        run: brew install tmux jq
+      - name: Run the orchestrator shell tests
+        run: bash test/run-all.sh
+
+  swift-tests:
+    # Hosted macOS 27 image (preview). Package.swift needs macOS 27 and tools 6.4.
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run swift test
+        run: swift test

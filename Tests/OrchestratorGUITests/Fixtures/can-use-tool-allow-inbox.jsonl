@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"Run exactly this with the Bash tool: git add a.txt && git commit -m \"test: add a\" -m \"Context: fixture repo for a permission probe\". Then reply with one short sentence saying what happened."}}
+{"type":"control_response","response":{"subtype":"success","request_id":"388f9136-0bda-4693-a65c-fc566bb05a5e","response":{"behavior":"allow","updatedInput":{"command":"git add a.txt && git commit -m \"test: add a\" -m \"Context: fixture repo for a permission probe\"","cwd":"/tmp/repo"}}}}

@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":"Reply with the single word ready."}}
+{"type":"control_request","request_id":"req-model-1","request":{"subtype":"set_model","model":"sonnet"}}
+{"type":"control_request","request_id":"req-model-2","request":{"subtype":"set_model","model":"haiku"}}

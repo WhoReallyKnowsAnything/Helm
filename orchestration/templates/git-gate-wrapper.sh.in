@@ -1,0 +1,19 @@
+#!/bin/bash
+# Template: install.sh replaces @ORCH_DIR@ with the absolute orchestration folder.
+# Body of the ctx_shell git-approval-gate hook, moved out of settings.json so the
+# registered command holds no exec/$() for lean-ctx's shell check to refuse.
+G="@ORCH_DIR@/hooks/git-approval-gate.sh"
+[ -x "$G" ] && exec "$G"
+C=$(node -e "(async()=>{let d=[];for await(let c of process.stdin)d.push(c);try{process.stdout.write(String(JSON.parse(Buffer.concat(d)).cwd||[]))}catch{}})()" 2>/dev/null)
+if [ -z "$C" ]; then
+  printf "{\042hookSpecificOutput\042:{\042hookEventName\042:\042PreToolUse\042,\042permissionDecision\042:\042ask\042,\042permissionDecisionReason\042:\042The approval gate script is missing and the hook could not read the working folder (node missing or bad input), so this call needs your approval.\042}}"
+  exit 0
+fi
+if . "${G%/*}/../lib/session-state.sh" 2>/dev/null; then
+  cd "$C" 2>/dev/null
+  live_worker_agent "$C" >/dev/null 2>&1 || exit 0
+else
+  case "$C" in */.claude/worktrees/*) ;; *) exit 0;; esac
+fi
+printf "{\042hookSpecificOutput\042:{\042hookEventName\042:\042PreToolUse\042,\042permissionDecision\042:\042deny\042,\042permissionDecisionReason\042:\042The approval gate script is missing, so this call from a live worker is denied. Restore orchestration/hooks/git-approval-gate.sh and retry.\042}}"
+exit 0

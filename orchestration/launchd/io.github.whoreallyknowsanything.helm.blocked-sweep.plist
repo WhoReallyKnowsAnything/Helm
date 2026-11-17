@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: install.sh replaces @ORCH_DIR@ (the orchestration folder) and @HOME@ (the home folder), XML-escaped. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.whoreallyknowsanything.helm.blocked-sweep</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>timeout 25 /bin/bash "$1" --blocked-sweep-all; rc=$?; if [ "$rc" -eq 124 ]; then echo "blocked-sweep timed out after 25s -- tmux calls hang under launchd when WorkingDirectory is inside a TCC-protected folder (~/Documents) and /bin/bash lacks Full Disk Access; see docs/approval-relay-setup.md" &gt;&amp;2; fi; exit "$rc"</string>
+        <string>_</string>
+        <string>@ORCH_DIR@/lib/dispatch-task.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>SWEEP_TRIGGER</key>
+        <string>launchd</string>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>@ORCH_DIR@</string>
+    <key>StartInterval</key>
+    <integer>60</integer>
+    <key>StandardOutPath</key>
+    <string>@HOME@/.claude/logs/approval-sweep-launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>@HOME@/.claude/logs/approval-sweep-launchd.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
