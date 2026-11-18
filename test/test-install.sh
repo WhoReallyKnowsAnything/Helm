@@ -201,7 +201,6 @@ for c in 'git commit -m x' 'git push origin main' 'gh pr create --title x'; do
   case "$O" in *'"allow"'*) fail "gate wrapper: '$c' got allow";; *'"permissionDecision":"ask"'*) pass "gate wrapper: '$c' gets ask";; *) fail "gate wrapper: '$c' got [$O]";; esac
 done
 
-ls "$FH/Library/LaunchAgents" | grep -q mempalace-hub && fail "fresh home: install wrote a mempalace-hub LaunchAgent" || pass "fresh home: no mempalace-hub LaunchAgent written"
 
 echo "passed=$PASS_COUNT failed=$FAIL_COUNT"
 [ "$FAIL_COUNT" -eq 0 ]

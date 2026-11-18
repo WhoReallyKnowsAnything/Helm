@@ -80,10 +80,10 @@ This mode does what New Project does in the interactive menu, without prompts. I
 
 - All three flags are required, each with a value. `--gui-new`, `--gui-folder` and `--gui-root` exclude each other.
 - `<name>` matches `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`. The folder is `$PROJECTS_DIR/<name>`. `PROJECTS_DIR` comes from the env file, else the environment, else `~/Documents/Projects`.
-- Steps: `git init`, scaffold (`.gitignore`, `.claudeignore` when the template exists, `README.md`, `.env.example`, `.claude/settings.json`), MemPalace wing (skipped when `NO_MEMPALACE=1`), one commit `chore: initial project scaffold`, `gh repo create` for `private` or `public`, Notion Projects row (skipped when `NO_NOTION=1`).
+- Steps: `git init`, scaffold (`.gitignore`, `.claudeignore` when the template exists, `README.md`, `.env.example`, `.claude/settings.json`), one commit `chore: initial project scaffold`, `gh repo create` for `private` or `public`, Notion Projects row (skipped when `NO_NOTION=1`).
 - `tmux` and `git` must be on the env file `PATH`. `gh` must be too, unless `--github skip`.
 - Exit code 1 means a validation failure. Nothing is created. Exit code 4 means `$PROJECTS_DIR/<name>` already exists (file or directory). Exit code 5 means `git init`, the scaffold or the commit failed. The folder stays and stderr names the step and the folder. Exit codes 0 and 3 are the same as for `--gui-folder`.
-- A MemPalace, GitHub or Notion failure prints `warning: <step>: <reason>` on stderr and the launch goes on.
+- A GitHub or Notion failure prints `warning: <step>: <reason>` on stderr and the launch goes on.
 - Before the last line, stdout holds `folder=<absolute path>` and `repo=<url or none>`. The last line is the base session name.
 
 ### Stop one project

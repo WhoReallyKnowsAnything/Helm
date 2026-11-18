@@ -61,7 +61,7 @@ for w in git-gate permission-hold; do
 done
 
 OLD_LABEL_PREFIX="com.claude-multi-session-orchestrator"
-for j in blocked-sweep mempalace-hub; do
+for j in blocked-sweep; do
   old="$OLD_LABEL_PREFIX.$j"
   if [ -f "$AGENTS_DIR/$old.plist" ] || launchctl print "gui/$(id -u)/$old" >/dev/null 2>&1; then
     launchctl bootout "gui/$(id -u)/$old" 2>/dev/null || true
@@ -74,9 +74,6 @@ render "$ORCH_DIR/launchd/$PLIST_NAME" "$PLIST" 644 "$(xml_esc "$ORCH_DIR")" "$(
 plutil -lint "$PLIST" >/dev/null
 launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true # "not loaded" is fine
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
-# The mempalace-hub LaunchAgent is not written here: launch-claude.sh loads it only when
-# $HOME/.local/bin/mempalace exists, so a machine without mempalace never gets one.
-echo "mempalace-hub LaunchAgent: skipped here (launch-claude.sh loads it only if mempalace is installed)"
 
 # --- hooks in ~/.claude/settings.json ---
 command -v node >/dev/null || { echo "install.sh: node is required to edit settings.json but was not found on PATH" >&2; exit 1; }

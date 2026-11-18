@@ -4,9 +4,9 @@
 # creates a project folder under PROJECTS_DIR (scaffold, one commit, optional GitHub
 # repo and Notion row), then continues as --gui-folder. Runs the REAL launcher against
 # a PRIVATE tmux server (TMUX_TMPDIR in a scratch dir, never the default server) with
-# stub claude/lean-ctx/headroom/repowire/osascript/pgrep/nohup/gh/mempalace first on
-# PATH. PROJECTS_DIR, HOME and TMPDIR are scratch directories, NO_NOTION=1 and
-# NO_MEMPALACE=1 are set by default, so nothing touches the real projects folder,
+# stub claude/lean-ctx/headroom/repowire/osascript/pgrep/nohup/gh first on
+# PATH. PROJECTS_DIR, HOME and TMPDIR are scratch directories and NO_NOTION=1 is
+# set by default, so nothing touches the real projects folder,
 # GitHub or Notion. The launcher runs with no controlling terminal (setsid).
 
 set -u
@@ -30,7 +30,7 @@ export TMUX_TMPDIR="$SCRATCH/t"
 export TMPDIR="$SCRATCH/tmp"
 export HOME="$SCRATCH/home"
 export PROJECTS_DIR="$SCRATCH/projects"
-export NO_NOTION=1 NO_MEMPALACE=1
+export NO_NOTION=1
 STUB="$SCRATCH/stub"
 GHSTUB="$SCRATCH/ghstub"
 CALLS="$SCRATCH/calls.log"
@@ -47,7 +47,7 @@ trap cleanup EXIT
 # ---- stubs -----------------------------------------------------------------
 printf '#!/bin/bash\nif [[ "${1-}" == update ]]; then exit 0; fi\nsleep 300\n' >"$STUB/claude"
 for s in lean-ctx headroom repowire; do printf '#!/bin/bash\nexit 0\n' >"$STUB/$s"; done
-for s in osascript nohup mempalace; do
+for s in osascript nohup; do
     printf '#!/bin/bash\necho "%s $*" >>"%s"\nexit 0\n' "$s" "$CALLS" >"$STUB/$s"
 done
 printf '#!/bin/bash\necho "pgrep $*" >>"%s"\nexit 0\n' "$CALLS" >"$STUB/pgrep"
@@ -167,7 +167,7 @@ grep -q '"permissions"' "$F/.claude/settings.json" && pass "success: .claude/set
 [[ ! -e "$F/.claudeignore" ]] && pass "success: no .claudeignore without a template" || fail "success: unexpected .claudeignore"
 [[ "$(git -C "$F" rev-list --count HEAD)" == 1 && "$(git -C "$F" log -1 --format=%s)" == "chore: initial project scaffold" ]] && pass "success: exactly 1 commit with the scaffold message" || fail "success: commits: $(git -C "$F" log --format=%s | tr '\n' '|')"
 [[ "$(git -C "$F" ls-files | sort | tr '\n' ' ')" == ".claude/settings.json .env.example .gitignore README.md " ]] && git -C "$F" diff HEAD --quiet && pass "success: the whole scaffold is committed" || fail "success: tracked files: $(git -C "$F" ls-files | tr '\n' ' ')"
-[[ ! -s "$CALLS" ]] && pass "success: no mempalace, gh, watchdog or osascript call" || fail "success: calls: $(tr '\n' '|' <"$CALLS")"
+[[ ! -s "$CALLS" ]] && pass "success: no gh, watchdog or osascript call" || fail "success: calls: $(tr '\n' '|' <"$CALLS")"
 
 # ---- templates, and reuse of a running session -----------------------------
 mkdir -p "$HOME/.claude/templates"
@@ -190,13 +190,12 @@ reset_all
 run_launcher --gui-new viaenv --github skip --env-file "$ENVFILE"
 if [[ "$RC" -eq 0 && -d "$SCRATCH/other-projects/viaenv/.git" && ! -e "$PROJECTS_DIR/viaenv" ]] && grep -qx "folder=$SCRATCH/other-projects/viaenv" "$OUT"; then pass "PROJECTS_DIR: the env file value is used"; else fail "PROJECTS_DIR from env file: rc=$RC out=$(head -c 200 "$OUT") err=$(head -c 200 "$ERR")"; fi
 
-# ---- GitHub, mempalace and Notion steps (stubs only) ------------------------
+# ---- GitHub and Notion steps (stubs only) ------------------------
 write_envfile "$GHSTUB:$TOOLPATH"
 reset_all
-NO_MEMPALACE= run_launcher --gui-new ghpriv --github private --env-file "$ENVFILE"
+run_launcher --gui-new ghpriv --github private --env-file "$ENVFILE"
 F="$PROJECTS_DIR/ghpriv"
 if [[ "$RC" -eq 0 ]] && grep -qx "repo=https://github.com/t/ghpriv.git" "$OUT" && grep -qx "gh repo create ghpriv --private --source=. --remote=origin --push" "$CALLS"; then pass "private: gh repo create called, repo= holds the URL"; else fail "private: rc=$RC out=$(head -c 200 "$OUT") calls=$(tr '\n' '|' <"$CALLS") err=$(head -c 200 "$ERR")"; fi
-grep -qx "mempalace mine $F --wing ghpriv --daemon --background" "$CALLS" && pass "mempalace: mine called with the wing" || fail "mempalace: calls: $(tr '\n' '|' <"$CALLS")"
 reset_all
 run_launcher --gui-new ghpub --github public --env-file "$ENVFILE"
 grep -qx "gh repo create ghpub --public --source=. --remote=origin --push" "$CALLS" && [[ "$RC" -eq 0 ]] && pass "public: gh repo create --public" || fail "public: rc=$RC calls=$(tr '\n' '|' <"$CALLS")"

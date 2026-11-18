@@ -789,11 +789,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # Compute SESSION_DIR from label and ensure git worktree exists
 PROJECT_ROOT="$(_resolve_project_root)" || exit 1
 
-# Warn (never block) when the MemPalace hub is down or read-only: workers could not save at wrap-up.
-if [[ -f "$SCRIPT_DIR/orchestration/lib/mempalace-hub-check.sh" ]]; then
-    source "$SCRIPT_DIR/orchestration/lib/mempalace-hub-check.sh" 2>/dev/null && mempalace_hub_warning >&2
-fi
-
 # Source tmux-session.sh for tmux window management (fail-safe if unavailable)
 if [[ -f "$SCRIPT_DIR/orchestration/lib/tmux-session.sh" ]]; then
     source "$SCRIPT_DIR/orchestration/lib/tmux-session.sh" 2>/dev/null || true
