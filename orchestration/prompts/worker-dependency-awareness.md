@@ -223,7 +223,7 @@ This section applies only if your label (your worktree folder name, as in `--mar
 
 When your work is complete, finish in this order. Do not skip a step and do not change the order.
 
-1. Run `/om-wrap-up` as your last step of work. It is a user slash command, so call the `Skill` tool with skill `om-wrap-up`. Wait for it to finish. Save to MemPalace only through the MemPalace MCP tools (`mempalace_add_drawer`, `mempalace_diary_write`), never the `mempalace` CLI.
+1. Run `/om-wrap-up` as your last step of work. It is a user slash command, so call the `Skill` tool with skill `om-wrap-up`. Wait for it to finish.
 2. Mark yourself done. Run this, for your own label only, with the literal `<orch_root>` and `<your label>` found as in "Find the script path first" above. Never mark another session's label.
 
 ```bash

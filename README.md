@@ -231,8 +231,13 @@ The app is built so that no session can approve its own risky actions:
     `Bash` and the gate holds those commits and pushes in the same way. The
     install step adds the `Bash` gate to `~/.claude/settings.json` unless a
     gate for `Bash` already exists there or in `~/.claude/settings.local.json`.
-  - **MemPalace.** Workers save session notes to it when it is installed.
-    Without it, no MemPalace service is started and no warning blocks a launch.
+  - **[Terminus](https://github.com/crenshawdev/terminus).** A local memory
+    tool that archives Claude Code transcripts and recalls them in later
+    sessions. It makes no model calls. It works on macOS and Linux. Install it
+    with
+    `curl -fsSL https://raw.githubusercontent.com/crenshawdev/terminus/main/install.sh | sh`.
+    It hooks into Claude Code itself, so every orchestrator and worker session
+    Helm starts gets recall with no Helm setup.
   - **headroom.** Launch starts its proxy when `headroom` is on `PATH`.
   - **Notion.** The orchestrator needs the `notionApi` MCP server
     (`@notionhq/notion-mcp-server`) and your Notion data source IDs. Give the

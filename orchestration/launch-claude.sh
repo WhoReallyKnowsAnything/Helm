@@ -20,12 +20,12 @@ set +o posix
 # goes on as --gui-folder on it. All three flags are required, each with a value;
 # --gui-new, --gui-folder and --gui-root exclude each other. The steps: git init;
 # scaffold (.gitignore, .claudeignore, README.md, .env.example, .claude/settings.json);
-# MemPalace wing (skipped when NO_MEMPALACE=1); one commit; gh repo create for
+# one commit; gh repo create for
 # private or public (git and gh must be on the env file's PATH, gh not for skip);
 # Notion Projects row (skipped when NO_NOTION=1). Exit 1 is any validation failure
 # (nothing is created). Exit 4: $PROJECTS_DIR/<name> already exists (file or
 # directory). Exit 5: git init, the scaffold or the commit failed; stderr names the
-# step and the folder, and the folder stays. MemPalace, GitHub and Notion failures
+# step and the folder, and the folder stays. GitHub and Notion failures
 # only print `warning: <step>: <reason>` on stderr. Before the last line, stdout holds
 # `folder=<absolute path>` and `repo=<url or none>`. PROJECTS_DIR comes from the env
 # file, else the environment, else ~/Documents/Projects.
@@ -71,12 +71,6 @@ PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Documents/Projects}"
 
 # Task dispatch functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# MemPalace hub: start it before any session so it takes the writer lease before a stdio
-# mempalace-mcp does. Never blocks the launch; warns on stderr when the hub is still down.
-if [[ -f "$SCRIPT_DIR/lib/mempalace-hub-check.sh" ]]; then
-    source "$SCRIPT_DIR/lib/mempalace-hub-check.sh" 2>/dev/null && { mempalace_hub_ensure || mempalace_hub_warning >&2; }
-fi
 
 list_projects() {
     project_dirs=()
@@ -155,19 +149,6 @@ GITIGNORE
 }
 CLAUDEJSON
     echo "  .claude/settings.json created"
-}
-
-seed_mempalace() {
-    local proj_name="$1" rc=0
-    if command -v mempalace >/dev/null; then
-        mempalace mine "$PWD" --wing "$proj_name" --daemon --background >/dev/null 2>&1 || rc=$?
-        if (( rc == 0 )); then
-            echo "  MemPalace wing seeded"
-        else
-            echo "  Warning: MemPalace mine failed, wing not seeded" >&2
-        fi
-    fi
-    return $rc
 }
 
 commit_initial_scaffold() {
@@ -355,9 +336,6 @@ if [[ "$_gui_new_set" == true ]]; then
     pushd "$_gui_folder" >/dev/null || _gui_new_fail "1 (git init)"
     ( set -e; scaffold_project "$_gui_new" ) >/dev/null
     (( $? == 0 )) || _gui_new_fail "2 (scaffold)"
-    if [[ "${NO_MEMPALACE:-}" != 1 ]]; then
-        seed_mempalace "$_gui_new" >/dev/null || _gui_warn mempalace "mempalace mine failed"
-    fi
     ( set -e; commit_initial_scaffold ) >/dev/null
     (( $? == 0 )) || _gui_new_fail "4 (commit)"
     if [[ "$_gui_github" != skip ]]; then
@@ -408,8 +386,6 @@ case "$claude_mode" in
                     echo "  git init"
 
                     scaffold_project "$proj_name"
-
-                    seed_mempalace "$proj_name"
 
                     commit_initial_scaffold
 
