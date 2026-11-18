@@ -633,6 +633,9 @@ as a system prompt. The live check (Plan 8 Task 4) covers that.
 | Worker relay (events) | SessionStart (no matcher), Stop, PostToolUse (`Bash\|WebFetch\|mcp__.*\|Write\|Edit\|MultiEdit\|NotebookEdit`) | `worker-relay.sh` | opens (observer) | "Worker relay hooks" |
 | Worker prompt on resume | the same SessionStart entry, only when `source` is `resume` | `worker-relay.sh` | opens (observer) | "Come back after a reboot" |
 | Permission hold | PermissionRequest, no matcher | `permission-hold.sh`, through its wrapper | closes | "The permission hold", block `wrapper-permission-hold` |
+| Typed-command gate | UserPromptSubmit (no matcher) and PreToolUse (Skill) | `typed-command-gate.sh` | opens (it gates only a Helm session or a live worker) | `orchestration/install.sh` (timeout 90 s) |
+
+A blocked `/cadence:cad-plan`, `/cadence:cad-execute` or `/cadence:cad-milestone` runs when you retype it with a trailing `override: <reason>`. The reason goes to `/cad-capture`.
 
 The hold and gate wrappers fail closed: if the script is missing, the call is
 denied. Their hook registrations in `~/.claude/settings.json` and

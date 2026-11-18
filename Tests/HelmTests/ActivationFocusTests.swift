@@ -111,6 +111,39 @@ struct ActivationFocusTests {
         #expect(!PromptBoxView.mayClaimOnKey(enabled: false, yieldsFocus: false, became: own, host: own))
     }
 
+    private func mouseUp() -> NSEvent {
+        NSEvent.mouseEvent(with: .leftMouseUp, location: .zero, modifierFlags: [], timestamp: 0,
+                           windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 0)!
+    }
+
+    /// The click that activates the app arrives after `didBecomeActive` and moves focus under the pointer: its mouse up claims again.
+    @Test func theActivatingClickClaimsFocusAgain() async throws {
+        let reclaim = PromptBoxView.ClickReclaim()
+        var claims = 0
+        reclaim.install { claims += 1 }
+        defer { reclaim.remove() }
+        reclaim.activated()
+        NSApp.sendEvent(mouseUp())
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims == 1)
+        NSApp.sendEvent(mouseUp())
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims == 1) // only the first click after activation
+    }
+
+    /// A click with no activation before it, or long after it, must not pull focus off what the user selected.
+    @Test func otherClicksDoNotClaimFocus() async throws {
+        let reclaim = PromptBoxView.ClickReclaim()
+        var claims = 0
+        reclaim.install { claims += 1 }
+        defer { reclaim.remove() }
+        NSApp.sendEvent(mouseUp())
+        reclaim.activated(at: Date(timeIntervalSinceNow: -(PromptBoxView.ClickReclaim.window + 1)))
+        NSApp.sendEvent(mouseUp())
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims == 0)
+    }
+
     /// AppKit selects all text on focus, so the next key would replace a kept draft: the claim leaves the caret at the end.
     @Test func aClaimWithADraftPutsTheCaretAtTheEndWithoutSelection() async throws {
         _ = NSApplication.shared

@@ -185,6 +185,33 @@ struct ConversationParserTests {
         #expect(failed.items.isEmpty)
     }
 
+    @Test func aBlockedPromptShowsTheHookReasonOnce() throws {
+        var parser = ConversationParser()
+        parser.feed(try ConversationFixtures.lines("hook-block"))
+        let statuses = parser.items.compactMap { item -> String? in
+            if case .status(_, let text) = item { return text } else { return nil }
+        }
+        #expect(statuses == ["G2: this phase is unplanned. Plan it before you execute it."])
+        #expect(parser.items.count == 1)
+    }
+
+    @Test func aHookEventThatDidNotBlockAddsNoItem() throws {
+        let allowed = try ConversationFixtures.lines("hook-block").filter { !$0.contains("blocked_by_hook") && !$0.contains(#""type":"result""#) }
+        var parser = ConversationParser()
+        parser.feed(allowed)
+        #expect(allowed.count == 2)
+        #expect(parser.items.isEmpty)
+    }
+
+    @Test func aBlockedPromptFoldsTheSameLineByLine() throws {
+        let lines = try ConversationFixtures.lines("hook-block")
+        var whole = ConversationParser()
+        whole.feed(lines)
+        var single = ConversationParser()
+        for line in lines { single.feed(line) }
+        #expect(single.items == whole.items)
+    }
+
     @Test func anMcpStatusReplyReplacesTheServerListAndASetModelStillAddsItsLine() {
         // Shape of the scratchpad spike's reply (2026-11-07), trimmed to 3 servers.
         let reply = #"{"type":"control_response","response":{"subtype":"success","request_id":"app-1","response":{"mcpServers":[{"name":"lean-ctx","status":"connected","scope":"user","source":"user","transport":"stdio"},{"name":"context7","status":"connected","scope":"user","source":"user","transport":"stdio"},{"name":"github","status":"failed","scope":"user","source":"user","transport":"http"}]}}}"#

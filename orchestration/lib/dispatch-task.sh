@@ -152,6 +152,32 @@ if [[ "${1:-}" == "--artifact-exists" ]]; then
     fi
     exit 1
 fi
+# --cycle-open: exit 0 = a cycle is open (roadmap holds >= 1 phase), 1 = none
+# (0 phases, or no .planning/), 2 = script error. Reads no task text and takes
+# no further arguments; every value stays a quoted argv element, never eval'd.
+if [[ "${1:-}" == "--cycle-open" ]]; then
+    _co_err() { echo "dispatch-task.sh: --cycle-open: $1" >&2; exit 2; }
+    PROJECT_ROOT="$(_resolve_project_root)" || exit 2
+    [[ -d "$PROJECT_ROOT/.planning" ]] || exit 1
+    command -v jq >/dev/null 2>&1 || _co_err "jq not found"
+    command -v node >/dev/null 2>&1 || _co_err "node not found"
+    _co_plugins="$HOME/.claude/plugins/installed_plugins.json"
+    [[ -f "$_co_plugins" ]] || _co_err "no plugins file at $_co_plugins"
+    _co_install=""
+    _co_install="$(jq -r '[.plugins["cadence@cadence"][]?.installPath // empty][0] // empty' "$_co_plugins" 2>/dev/null)" || _co_install=""
+    [[ -n "$_co_install" ]] || _co_err "no cadence@cadence entry"
+    _co_planning="$_co_install/cadence-core/bin/planning.mjs"
+    [[ -f "$_co_planning" ]] || _co_err "planning.mjs not found"
+    _co_out=""
+    _co_rc=0
+    _co_out="$(node "$_co_planning" status --dir "$PROJECT_ROOT/.planning" 2>/dev/null)" || _co_rc=$?
+    [[ "$_co_rc" -eq 0 ]] || _co_err "status exited $_co_rc"
+    _co_total=""
+    _co_total="$(printf '%s' "$_co_out" | jq -r 'if .ok == true and ((.total | type) == "number") then .total else empty end' 2>/dev/null)" || _co_total=""
+    [[ "$_co_total" =~ ^[0-9]+$ ]] || _co_err "unreadable status output"
+    [[ "$_co_total" -ge 1 ]] && exit 0
+    exit 1
+fi
 # Read-only. notified_at is stamped only by an explicit --mark-notified issued
 # after a send actually succeeds, so a send that exhausts its retries stays
 # visible to every later sweep instead of vanishing with no way back.
