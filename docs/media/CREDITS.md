@@ -25,4 +25,4 @@
 
 ## Content
 
-All screens are redrawn demo UI with made-up data (`acme-weather-app`). The app icon is `Resources/AppIcon.svg`. Colours come from the design kit tokens in `Sources/OrchestratorGUI/DesignKit/Tokens.swift`.
+All screens are redrawn demo UI with made-up data (`acme-weather-app`). The app icon is `Resources/AppIcon.svg`. Colours come from the design kit tokens in `Sources/Helm/DesignKit/Tokens.swift`.

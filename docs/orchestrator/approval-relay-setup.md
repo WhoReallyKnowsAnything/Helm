@@ -378,9 +378,10 @@ checks before it writes a decision. Both must pass.
      in its arguments (`launch-claude.sh` in Orchestration mode). The band runs
      inside this process.
    - the orchestrator-gui app: an executable at a path that ends in
-     `OrchestratorGUI.app/Contents/MacOS/OrchestratorGUI` or
-     `Helm.app/Contents/MacOS/OrchestratorGUI`, installed or a dev
-     build. The app passes nothing new.
+     `Helm.app/Contents/MacOS/Helm`, installed or a dev build. During the
+     change-over from the old executable name,
+     `Helm.app/Contents/MacOS/OrchestratorGUI` also passes. The app passes
+     nothing new.
 
 What the check guarantees: a worker that runs `--gate-decide` from its own
 shell tool is refused, with or without `env -u`, and the hold stays pending.
@@ -403,7 +404,7 @@ routes stay open:
   `tmux new-window`, `launchctl submit` or `osascript`. That process has no
   worker parent. It passes if it also has a decider-shaped parent, for example
   a new `claude` started with the drafting prompt, or any binary copied to a
-  path that ends in `OrchestratorGUI.app/Contents/MacOS/OrchestratorGUI` or
+  path that ends in `Helm.app/Contents/MacOS/Helm` or
   `Helm.app/Contents/MacOS/OrchestratorGUI`.
 - The worker edits `dispatch-task.sh`, `gate-hold.sh`, the hook scripts or
   `~/.claude/settings*.json`. The same user owns them.

@@ -2,22 +2,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "OrchestratorGUI",
+    name: "Helm",
     platforms: [.macOS(.v27)],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-markdown.git", from: "0.9.0"),
     ],
     targets: [
         .executableTarget(
-            name: "OrchestratorGUI",
+            name: "Helm",
             dependencies: [
                 .product(name: "Markdown", package: "swift-markdown"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
-            name: "OrchestratorGUITests",
-            dependencies: ["OrchestratorGUI"],
+            name: "HelmTests",
+            dependencies: ["Helm"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

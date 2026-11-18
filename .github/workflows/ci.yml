@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install tmux and jq
-        run: brew install tmux jq
+        run: brew install tmux jq coreutils
       - name: Run the orchestrator shell tests
         run: bash test/run-all.sh
 
@@ -22,5 +22,8 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
+      - name: Install tmux
+        run: brew install tmux
       - name: Run swift test
-        run: swift test
+        # Serial: some tests assert wall-clock budgets that parallel load on a shared runner breaks.
+        run: swift test --no-parallel

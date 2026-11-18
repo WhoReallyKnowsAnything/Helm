@@ -17,7 +17,7 @@ Replaces D-13a's lower-case labels (phase 2, D-02). Buttons show their source ca
 
 ## Tokens
 
-Three layers. Only the meaning layer reads the palette. Parts read the meaning layer and the scales. All of it lives in `Sources/OrchestratorGUI/DesignKit/Tokens.swift`.
+Three layers. Only the meaning layer reads the palette. Parts read the meaning layer and the scales. All of it lives in `Sources/Helm/DesignKit/Tokens.swift`.
 
 ### Palette
 

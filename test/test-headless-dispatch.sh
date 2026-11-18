@@ -161,7 +161,9 @@ PLAIN_CMD="$(_build_launch_cmd hl-r "$DEF_DIR" 'sonnet[1m]' '' "$SF/inbox.jsonl"
 BASE_CMD="$(_build_launch_cmd hl-r "$DEF_DIR" 'sonnet[1m]' '' "$SF/inbox.jsonl" "$SF/out.jsonl" '' "$ORCH")"
 RESUME_CMD="$(_build_launch_cmd hl-r "$DEF_DIR" 'sonnet[1m]' '' "$SF/inbox.jsonl" "$SF/out.jsonl" 'abc-123_DEF' "$ORCH")"
 EXPECT_BASE="$(REPO_DIR="$EXTRACTED_ROOT"; expect "$EXPECT_DEFAULT" hl-r)"
-EXPECT_RESUME="${EXPECT_BASE/ >> \'/ --resume \'abc-123_DEF\' >> \'}"
+# Quotes go through variables: bash 3.2 (macOS /bin/bash) keeps the backslash of \' inside ${var/pat/rep}.
+SQ="'"; RESUME_FROM=" >> $SQ"; RESUME_TO=" --resume ${SQ}abc-123_DEF${SQ} >> $SQ"
+EXPECT_RESUME="${EXPECT_BASE%%"$RESUME_FROM"*}${RESUME_TO}${EXPECT_BASE#*"$RESUME_FROM"}"
 if [ "$BASE_CMD" = "$EXPECT_BASE" ] && [ "$RESUME_CMD" = "$EXPECT_RESUME" ]; then
     pass "a resume id adds only the --resume part, after the other flags"
 else

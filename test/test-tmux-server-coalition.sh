@@ -96,8 +96,11 @@ chmod +x "$SCRATCH/bin/tmux"
 big="$(head -c 150000 /dev/zero | tr '\0' 'a')"
 printf 'PATH=/usr/bin:/bin\nHOME=%s\nBIG=%s\n' "$HOME" "$big" >"$SCRATCH/app.env"
 before="$(job_labels)"
-PATH="$SCRATCH/bin:$PATH" tmux_ensure_base_session s1 win 'sleep 300' "$SCRATCH" "$SCRATCH/app.env" CLAUDE_GUI=1
+# Set PATH around the call, not as a prefix: bash 3.2 (macOS /bin/bash) does not apply a prefix PATH to a function's command lookup.
+OLD_PATH="$PATH"; PATH="$SCRATCH/bin:$PATH"
+tmux_ensure_base_session s1 win 'sleep 300' "$SCRATCH" "$SCRATCH/app.env" CLAUDE_GUI=1
 rc=$?
+PATH="$OLD_PATH"
 [[ "$rc" -eq 0 ]] && pass "slow start: returns 0" || fail "slow start: rc=$rc"
 starts="$(wc -l <"$SCRATCH/starts" 2>/dev/null | tr -d ' ')"
 [[ "$starts" == 1 ]] && pass "slow start: the client ran once" || fail "slow start: the client ran ${starts:-0} times"

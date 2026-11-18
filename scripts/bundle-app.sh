@@ -18,12 +18,12 @@ fi
 
 cd "$ROOT"
 swift build -c release
-BIN="$(swift build -c release --show-bin-path)/OrchestratorGUI"
+BIN="$(swift build -c release --show-bin-path)/Helm"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/OrchestratorGUI"
+cp "$BIN" "$APP/Contents/MacOS/Helm"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 # Before codesign: the signature seals Resources. ditto keeps file modes.

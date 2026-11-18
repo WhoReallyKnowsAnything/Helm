@@ -332,14 +332,16 @@ else
     fail "sweep: no pending record appeared"
 fi
 
-# --- the app's bundle name is accepted as the decider; any other bundle is not ---
-decide_as_app() { # bundle: stderr of --gate-decide for an id with no pending hold
-    PATH="$STUB:$PATH" ORCH_PROJECT_ROOT="$FIX" APP_BUNDLE="$1" env -u CLAUDECODE -u CLAUDE_CODE_SESSION_ID "$SCRIPT_DIR/fixtures/run-as-decider.sh" app bash "$DISPATCH" --gate-decide live no-such-id allow "$WANT" 2>&1 >/dev/null
+# --- Helm.app/.../Helm is the decider; any other bundle or executable is not ---
+decide_as_app() { # bundle exec: stderr of --gate-decide for an id with no pending hold
+    PATH="$STUB:$PATH" ORCH_PROJECT_ROOT="$FIX" APP_BUNDLE="$1" APP_EXEC="$2" env -u CLAUDECODE -u CLAUDE_CODE_SESSION_ID "$SCRIPT_DIR/fixtures/run-as-decider.sh" app bash "$DISPATCH" --gate-decide live no-such-id allow "$WANT" 2>&1 >/dev/null
 }
-for BUNDLE in Helm Canopy-Foreman OrchestratorGUI; do
-    check "$BUNDLE.app is accepted as the decider" bash -c "! grep -q 'not the orchestrator-gui app' <<< \"\$1\"" _ "$(decide_as_app "$BUNDLE")"
+for APP in Helm/Helm; do
+    check "$APP is accepted as the decider" bash -c "! grep -q 'not the orchestrator-gui app' <<< \"\$1\"" _ "$(decide_as_app "${APP%/*}" "${APP#*/}")"
 done
-check "an unknown bundle is refused as the decider" bash -c "grep -q 'not the orchestrator-gui app' <<< \"\$1\"" _ "$(decide_as_app Other)"
+for APP in Other/Helm Helm/OrchestratorGUI OrchestratorGUI/OrchestratorGUI Canopy-Foreman/OrchestratorGUI; do
+    check "$APP is refused as the decider" bash -c "grep -q 'not the orchestrator-gui app' <<< \"\$1\"" _ "$(decide_as_app "${APP%/*}" "${APP#*/}")"
+done
 
 echo
 echo "Results: $PASS_COUNT passed, $FAIL_COUNT failed"

@@ -3,7 +3,7 @@ import { interpolate, spring } from "remotion";
 
 export const FPS = 30;
 
-/** The design kit's dark tokens (Sources/OrchestratorGUI/DesignKit/Tokens.swift), as hex. */
+/** The design kit's dark tokens (Sources/Helm/DesignKit/Tokens.swift), as hex. */
 export const C = {
   bg: "#0E0E0F", g900: "#121213", g850: "#161617", g825: "#1C1C1E", g800: "#212123", g750: "#2A2A2C",
   g700: "#48484C", g500: "#9A9A9E", g300: "#C9C9CC", g100: "#E6E6E8",

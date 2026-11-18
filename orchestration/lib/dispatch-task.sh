@@ -711,7 +711,7 @@ if [[ "$1" == "--gate-decide" ]]; then
         [[ "$_gd_args" == *" --append-system-prompt-file "*/orchestration/prompts/worker-dependency-awareness.md* ]] \
             && _gd_fail "the caller runs inside a dispatched worker, only the orchestrator-gui app may decide a hold"
         [[ "${_gd_comm##*/}" == claude && "$_gd_args" == *" --append-system-prompt-file "*/orchestration/prompts/task-drafting-mode.md* ]] && _gd_decider=1
-        [[ "$_gd_comm" == */OrchestratorGUI.app/Contents/MacOS/OrchestratorGUI || "$_gd_comm" == */Canopy-Foreman.app/Contents/MacOS/OrchestratorGUI || "$_gd_comm" == */Helm.app/Contents/MacOS/OrchestratorGUI ]] && _gd_decider=1
+        [[ "$_gd_comm" == */Helm.app/Contents/MacOS/Helm ]] && _gd_decider=1
         _gd_pid=$_gd_ppid
     done
     [[ -n "$_gd_decider" ]] || _gd_fail "the caller is not the orchestrator-gui app"
