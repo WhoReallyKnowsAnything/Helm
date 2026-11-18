@@ -1,7 +1,7 @@
 import Foundation
 
 /// State of one node's prompt box (D-13). The delivery arrives as a closure, so tests use a stub and the blocking
-/// call runs off the main actor. The view owns the draft text and clears it only when `sent` turns true.
+/// call runs off the main actor. The model owns the draft text and clears it only when a send goes through or a native command opens.
 @MainActor
 final class PromptBoxModel: ObservableObject {
     @Published private(set) var isSending = false
@@ -11,6 +11,9 @@ final class PromptBoxModel: ObservableObject {
     @Published private(set) var sent = false
     /// The native command the last send asked for (D-05). The view opens its sheet and clears it on close.
     @Published var command: SlashMenu.Native?
+
+    /// The message being typed. It lives here, not in the view, so it survives a switch of session. A send or a command clears it.
+    @Published var draft = ""
 
     /// Dropped files waiting for the next send, in drop order.
     @Published private(set) var attachments: [URL] = []
@@ -42,7 +45,7 @@ final class PromptBoxModel: ObservableObject {
         sent = false
         if attachments.isEmpty {
             switch SlashMenu.action(for: text, terminalCommands: terminalCommands) {
-            case .native(let native): command = native; return
+            case .native(let native): command = native; draft = ""; return
             case .note(let note): message = note; return
             case .send: break
             }
@@ -52,7 +55,7 @@ final class PromptBoxModel: ObservableObject {
         let deliver = self.deliver, deliverFiles = self.deliverFiles, files = attachments
         let outcome = await Task.detached { files.isEmpty ? deliver(text) : (deliverFiles?(text, files) ?? .failed("This session cannot take files.")) }.value
         switch outcome {
-        case .sent: sent = true; attachments = []
+        case .sent: sent = true; attachments = []; draft = ""
         case .refused(let reason), .failed(let reason): message = reason
         }
     }

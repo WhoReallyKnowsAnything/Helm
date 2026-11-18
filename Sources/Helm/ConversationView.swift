@@ -136,7 +136,6 @@ struct ConversationHost: View {
     private struct Live: View {
         @StateObject private var store: ConversationStore
         @StateObject private var box: PromptBoxModel
-        @State private var draft = ""
         @State private var effort: String?
         @State private var controlMessage: String?
         @State private var mcpAsked = false
@@ -155,7 +154,7 @@ struct ConversationHost: View {
             self.nodeKey = nodeKey
             self.requests = requests
             _store = StateObject(wrappedValue: ConversationStore(path: path))
-            _box = StateObject(wrappedValue: ConversationHost.makeModel(inboxPath: inboxPath))
+            _box = StateObject(wrappedValue: requests.box(for: nodeKey, inboxPath: inboxPath))
             canSend = inboxPath != nil && !ended
             self.ended = ended
         }
@@ -199,10 +198,10 @@ struct ConversationHost: View {
                 WorkingLine(startedAt: store.turnRunning ? store.turnStartedAt : nil)
                 ControlPickers(model: pickers)
                 PromptBoxView(
-                    text: $draft,
-                    entries: SlashMenu.entries(slashCommands: store.slashCommands, skills: store.skills, text: draft),
+                    text: $box.draft,
+                    entries: SlashMenu.entries(slashCommands: store.slashCommands, skills: store.skills, text: box.draft),
                     enabled: canSend, message: controlMessage ?? box.message,
-                    onSend: { let text = draft; let rows = store.userRows; Task { await box.send(text, terminalCommands: store.terminalSlashCommands); if box.sent { store.echo(text, after: rows) } } },
+                    onSend: { let text = box.draft; let rows = store.userRows; Task { await box.send(text, terminalCommands: store.terminalSlashCommands); if box.sent { store.echo(text, after: rows) } } },
                     onEscape: interrupt,
                     terminalCommands: store.terminalSlashCommands,
                     onIntercept: { text in Task { await box.send(text, terminalCommands: store.terminalSlashCommands) } },
@@ -215,9 +214,7 @@ struct ConversationHost: View {
                 guard requests.control(for: nodeKey).interrupt == .ended, let inbox = inboxPath else { return }
                 Task.detached { ShellToolStopper.stop(inbox: inbox) }
             }
-            .onChange(of: box.sent) { if box.sent { draft = "" } }
             .onChange(of: box.command) {
-                if box.command != nil { draft = "" }
                 // The list comes from init, which claude writes only on the first message, so ask the session now.
                 if box.command == .mcp, canSend { mcpAsked = true; send { ControlLineWriter.appendMcpStatus(inbox: $0) } }
             }

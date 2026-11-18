@@ -84,13 +84,25 @@ struct PromptBoxView: View {
             // The window can become key after didBecomeActive fired, when keyWindow was still unset.
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { note in
                 let became = note.object as? NSWindow
-                if Self.mayClaimOnKey(enabled: enabled, yieldsFocus: yieldsFocus, became: became, host: hostWindow) { focused = true }
+                if Self.mayClaimOnKey(enabled: enabled, yieldsFocus: yieldsFocus, became: became, host: hostWindow) { takeFocus() }
             }
             .background(HostWindow { hostWindow = $0 })
     }
 
     private func claimFocus() {
-        if Self.mayClaim(enabled: enabled, yieldsFocus: yieldsFocus, window: NSApp.keyWindow) { focused = true }
+        if Self.mayClaim(enabled: enabled, yieldsFocus: yieldsFocus, window: NSApp.keyWindow) { takeFocus() }
+    }
+
+    /// AppKit selects all text when a field takes focus, so the next key would replace a kept draft: put the caret at the end instead.
+    private func takeFocus() {
+        focused = true
+        guard !text.isEmpty else { return }
+        DispatchQueue.main.async { Self.placeCaretAtEnd(in: hostWindow ?? NSApp.keyWindow) }
+    }
+
+    @MainActor static func placeCaretAtEnd(in window: NSWindow?) {
+        guard let editor = window?.firstResponder as? NSTextView, editor.isFieldEditor, editor.isEditable else { return }
+        editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
     }
 
     /// A window that became key claims only for its own box, and the window is the notification's, not `NSApp.keyWindow`.
