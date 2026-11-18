@@ -67,6 +67,17 @@ final class RequestStore: ObservableObject {
     private var pendings: [String: [PermissionRequest]] = [:]
     /// Runs the re-read and the answer, off the main actor.
     private let answerQueue = DispatchQueue(label: "RequestStore.answer")
+    /// One prompt box per session, kept here so a half-typed message and dropped files survive a switch of session. In memory only.
+    private var boxes: [String: PromptBoxModel] = [:]
+
+    /// The session's prompt box, kept by its inbox path (the node key repeats across projects). With no inbox path the node key is used; an empty key gets a fresh box.
+    func box(for nodeKey: String, inboxPath: String?) -> PromptBoxModel {
+        let key = inboxPath ?? nodeKey
+        if let kept = boxes[key] { return kept }
+        let model = ConversationHost.makeModel(inboxPath: inboxPath)
+        if !key.isEmpty { boxes[key] = model }
+        return model
+    }
 
     /// Points the store at the project's sessions. A session with the same out log keeps its follower.
     func setSessions(_ sessions: [Session]) {

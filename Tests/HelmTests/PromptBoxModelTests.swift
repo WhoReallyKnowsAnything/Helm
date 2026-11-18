@@ -76,4 +76,39 @@ struct PromptBoxModelTests {
         #expect(model.message == nil)
         #expect(model.sent)
     }
+
+    @Test func aDraftSurvivesASwitchAndASendClearsOnlyThatSessionsDraft() async {
+        let store = RequestStore()
+        let a = store.box(for: "A", inboxPath: nil), b = store.box(for: "B", inboxPath: nil)
+        a.draft = "half typed"
+        b.draft = "other"
+        #expect(store.box(for: "A", inboxPath: nil).draft == "half typed")
+        #expect(store.box(for: "B", inboxPath: nil).draft == "other")
+        let sender = PromptBoxModel { _ in .sent }
+        sender.draft = "hello"
+        await sender.send("hello")
+        #expect(sender.draft == "")
+        #expect(store.box(for: "A", inboxPath: nil).draft == "half typed")
+    }
+
+    @Test func twoInboxPathsWithTheSameNodeKeyKeepSeparateDrafts() {
+        let store = RequestStore()
+        let a = store.box(for: "orchestrator", inboxPath: "/tmp/a/inbox.jsonl")
+        let b = store.box(for: "orchestrator", inboxPath: "/tmp/b/inbox.jsonl")
+        a.draft = "for a"
+        #expect(b.draft == "")
+        #expect(store.box(for: "orchestrator", inboxPath: "/tmp/a/inbox.jsonl") === a)
+        #expect(store.box(for: "orchestrator", inboxPath: "/tmp/b/inbox.jsonl") === b)
+    }
+
+    @Test func aNativeCommandClearsTheDraftAndAFailedSendKeepsIt() async {
+        let command = PromptBoxModel { _ in .sent }
+        command.draft = "/mcp"
+        await command.send("/mcp")
+        #expect(command.draft == "")
+        let failing = PromptBoxModel { _ in .failed("x") }
+        failing.draft = "keep me"
+        await failing.send("keep me")
+        #expect(failing.draft == "keep me")
+    }
 }

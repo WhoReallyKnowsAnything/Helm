@@ -3,7 +3,7 @@ import SwiftUI
 import Testing
 @testable import Helm
 
-@MainActor
+@MainActor @Suite(.serialized)
 struct ActivationFocusTests {
     /// Activating the app can make the window key after `didBecomeActive` fired, so the box also claims on key.
     @Test func theWindowBecomingKeyFocusesTheBoxAgain() async throws {
@@ -109,5 +109,20 @@ struct ActivationFocusTests {
         #expect(!PromptBoxView.mayClaimOnKey(enabled: true, yieldsFocus: false, became: own, host: nil))
         #expect(!PromptBoxView.mayClaimOnKey(enabled: true, yieldsFocus: true, became: own, host: own))
         #expect(!PromptBoxView.mayClaimOnKey(enabled: false, yieldsFocus: false, became: own, host: own))
+    }
+
+    /// AppKit selects all text on focus, so the next key would replace a kept draft: the claim leaves the caret at the end.
+    @Test func aClaimWithADraftPutsTheCaretAtTheEndWithoutSelection() async throws {
+        _ = NSApplication.shared
+        let draft = "half typed"
+        let box = PromptBoxView(text: .constant(draft), entries: [], enabled: true, message: nil, onSend: {})
+        let window = TestWindow.keyed(box)
+        try await Task.sleep(for: .milliseconds(300))
+        window.makeFirstResponder(nil)
+        try await Task.sleep(for: .milliseconds(100))
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: window)
+        try await Task.sleep(for: .milliseconds(300))
+        let editor = try #require(window.firstResponder as? NSTextView)
+        #expect(editor.selectedRange() == NSRange(location: (draft as NSString).length, length: 0))
     }
 }
