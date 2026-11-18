@@ -34,6 +34,8 @@ cleanup() {
 trap cleanup EXIT
 
 DB_PATH=$(session_state_db_path) || { echo "FAIL: could not resolve db_path"; exit 1; }
+# A fresh checkout (CI) has no .claude/session-state.db; the init script is idempotent.
+"$SCRIPT_DIR/../orchestration/init/init-state-store.sh" "$SCRIPT_DIR/.." >/dev/null 2>&1
 
 # Seed fixture sessions
 session_state_write "test-dep-a" "/tmp/test-dep-a-worktree" "running" >/dev/null

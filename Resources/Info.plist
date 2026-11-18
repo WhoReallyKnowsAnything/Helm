@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>OrchestratorGUI</string>
+	<string>Helm</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.whoreallyknowsanything.helm</string>
 	<key>CFBundleName</key>

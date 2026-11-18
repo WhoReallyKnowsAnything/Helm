@@ -20,9 +20,8 @@ There is no terminal window to watch. Every session is still the real
 `claude` CLI, so your hooks, plugins, skills, MCP servers and approval gates
 keep working exactly as they do in a terminal.
 
-> The app's visible name is Helm. The bundle id is
-> `io.github.whoreallyknowsanything.helm`. The executable and the Swift
-> package are still called `OrchestratorGUI` on purpose.
+> The app, its executable and its Swift package are all called Helm. The
+> bundle id is `io.github.whoreallyknowsanything.helm`.
 
 ---
 
@@ -268,7 +267,7 @@ For a quick debug build without the bundle:
 
 ```bash
 swift build
-swift run OrchestratorGUI
+swift run Helm
 ```
 
 After a rebuild, quit the app and open it again to load the new build. In the
@@ -296,9 +295,9 @@ scripts/grid-lint.sh      # spacing values stay on the layout grid
 ## Project layout
 
 ```
-Sources/OrchestratorGUI/      the app (SwiftUI + AppKit, about 180 files)
+Sources/Helm/                 the app (SwiftUI + AppKit, about 180 files)
   DesignKit/                  the app's own design system: tokens and parts
-Tests/OrchestratorGUITests/   unit, store and render tests
+Tests/HelmTests/              unit, store and render tests
 Resources/                    Info.plist and the app icon
 scripts/                      build, design checks and fixtures
 design/KIT.md                 design-kit reference: which token and part to use
@@ -316,7 +315,7 @@ changes, so screens update without polling.
 The app has its own look rather than stock controls: a dark theme, flat
 panels, 1-pixel borders and small corners, with status shown as a coloured dot
 and text. Cyan marks only what waits on you; blue marks work that is running.
-The design kit in `Sources/OrchestratorGUI/DesignKit/` holds the colour, type
+The design kit in `Sources/Helm/DesignKit/` holds the colour, type
 and spacing tokens and every shared part (buttons, rows, tabs, cards, the
 phase picker). `design/KIT.md` says which token or part to use where, and the
 design-gate script keeps the code to it. Button and title text follows macOS
