@@ -179,6 +179,13 @@ struct ConversationParser: Equatable {
     }
 
     private mutating func foldSystem(_ object: [String: Any]) {
+        if object["subtype"] as? String == "informational",
+           let outcome = object["prompt_submit_outcome"] as? [String: Any], outcome["kind"] as? String == "blocked_by_hook",
+           let reason = outcome["reason"] as? String, !reason.isEmpty {
+            append(.status(id: nextId("b"), text: reason))
+            turnHadText = true // the closing `result` repeats the reason with a prefix
+            return
+        }
         guard object["subtype"] as? String == "init" else { return foldTask(object) }
         for index in subagents.indices { subagents[index].running = false }
         slashCommands = object["slash_commands"] as? [String] ?? []

@@ -93,6 +93,9 @@ if (s.hooks === null || typeof s.hooks !== "object" || Array.isArray(s.hooks)) d
 
 // The command path holds a space (the runtime folder), so every path is quoted.
 const relay = { type: "command", command: `"${orch}/hooks/worker-relay.sh"`, timeout: 15 };
+// The typed-command gate is not fail-closed: it is global, so it must never block a non-Helm session.
+// 90 s covers its worst path (status, audit and criteria-coverage at 20 s each).
+const typed = { type: "command", command: `"${orch}/hooks/typed-command-gate.sh"`, timeout: 90 };
 const wrap = (n) => ({ type: "command", command: `bash "${hooksDir}/${n}-wrapper.sh"`, timeout: 900, onFailure: "block" });
 // Native Bash needs its own git gate (a machine without lean-ctx runs git through it). Skip it when
 // settings.json or settings.local.json already gates a matcher that covers Bash, e.g. "Bash|bash".
@@ -111,6 +114,8 @@ const wanted = [
   ["SessionStart", undefined, relay, "worker-relay.sh"],
   ["Stop", undefined, relay, "worker-relay.sh"],
   ["UserPromptSubmit", undefined, relay, "worker-relay.sh"],
+  ["UserPromptSubmit", undefined, typed, "typed-command-gate.sh"],
+  ["PreToolUse", "Skill", typed, "typed-command-gate.sh"],
 ];
 const isManaged = (h, name) => h && typeof h.command === "string" && h.command.includes(name);
 

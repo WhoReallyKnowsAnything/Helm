@@ -31,6 +31,27 @@ struct PromptBoxView: View {
     @State private var dismissed = false
     @FocusState private var focused: Bool
     @State private var hostWindow: NSWindow?
+    @State private var clickReclaim = ClickReclaim()
+
+    /// The click that activates the app is delivered after `didBecomeActive`, and its mouseDown moves focus to the view under the
+    /// pointer. So for a short window after activation, the first mouse up claims focus again. Later clicks are left alone.
+    @MainActor final class ClickReclaim {
+        static let window: TimeInterval = 1
+        private var activatedAt: Date?
+        private var monitor: Any?
+        func activated(at date: Date = Date()) { activatedAt = date }
+        func install(_ claim: @escaping () -> Void) {
+            guard monitor == nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
+                if let at = self?.activatedAt, Date().timeIntervalSince(at) < Self.window {
+                    self?.activatedAt = nil
+                    DispatchQueue.main.async { claim() }
+                }
+                return event
+            }
+        }
+        func remove() { monitor.map(NSEvent.removeMonitor); monitor = nil }
+    }
 
     private var showsMenu: Bool { enabled && !entries.isEmpty && !dismissed }
 
@@ -79,8 +100,12 @@ struct PromptBoxView: View {
         .fixedSize(horizontal: false, vertical: true)
         .background(Ink.header)
         .overlay(alignment: .top) { Ink.border.frame(height: Metric.hairline) }
-        .onAppear { claimFocus() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in claimFocus() }
+        .onAppear { claimFocus(); clickReclaim.install { claimFocus() } }
+        .onDisappear { clickReclaim.remove() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            clickReclaim.activated()
+            claimFocus()
+        }
             // The window can become key after didBecomeActive fired, when keyWindow was still unset.
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { note in
                 let became = note.object as? NSWindow
@@ -90,14 +115,20 @@ struct PromptBoxView: View {
     }
 
     private func claimFocus() {
-        if Self.mayClaim(enabled: enabled, yieldsFocus: yieldsFocus, window: NSApp.keyWindow) { takeFocus() }
+        if Self.mayClaim(enabled: enabled, yieldsFocus: yieldsFocus, window: hostWindow ?? NSApp.keyWindow) { takeFocus() }
     }
 
     /// AppKit selects all text when a field takes focus, so the next key would replace a kept draft: put the caret at the end instead.
     private func takeFocus() {
-        focused = true
-        guard !text.isEmpty else { return }
-        DispatchQueue.main.async { Self.placeCaretAtEnd(in: hostWindow ?? NSApp.keyWindow) }
+        // A click can move AppKit focus away while `focused` still reads true, and setting true again would do nothing: drop it first.
+        // The pause keeps SwiftUI from merging the false and the true into no change.
+        let stale = focused
+        if stale { focused = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + (stale ? 0.05 : 0)) {
+            focused = true
+            guard !text.isEmpty else { return }
+            DispatchQueue.main.async { Self.placeCaretAtEnd(in: hostWindow ?? NSApp.keyWindow) }
+        }
     }
 
     @MainActor static func placeCaretAtEnd(in window: NSWindow?) {

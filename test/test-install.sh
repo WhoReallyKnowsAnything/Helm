@@ -51,7 +51,11 @@ cat > "$S" <<'EOF'
   "hooks": {
     "PreToolUse": [
       {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo unrelated", "timeout": 5}]},
-      {"hooks": [{"type": "command", "command": "/old/root/orchestration/hooks/worker-relay.sh", "timeout": 15}]}
+      {"hooks": [{"type": "command", "command": "/old/root/orchestration/hooks/worker-relay.sh", "timeout": 15}]},
+      {"matcher": "Skill", "hooks": [{"type": "command", "command": "/old/root/orchestration/hooks/typed-command-gate.sh", "timeout": 90}]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command", "command": "/old/root/orchestration/hooks/typed-command-gate.sh", "timeout": 90}]}
     ],
     "Notification": [{"hooks": [{"type": "command", "command": "echo note"}]}]
   }
@@ -94,6 +98,12 @@ for (const ev of ["PostToolUse", "PreToolUse", "SessionStart", "Stop", "UserProm
 assert.strictEqual(count("PermissionRequest", "permission-hold-wrapper.sh"), 1);
 // one entry per matcher: lean-ctx's shell and native Bash
 assert.strictEqual(count("PreToolUse", "git-gate-wrapper.sh"), 2);
+// typed-command gate: one entry on UserPromptSubmit, one on PreToolUse in a Skill group, 90 s timeout
+assert.strictEqual(count("UserPromptSubmit", "typed-command-gate.sh"), 1);
+assert.strictEqual(count("PreToolUse", "typed-command-gate.sh"), 1);
+const skillGate = s.hooks.PreToolUse.filter((g) => g.matcher === "Skill").flatMap((g) => g.hooks).filter((h) => h.command.includes("typed-command-gate.sh"));
+assert.strictEqual(skillGate.length, 1);
+assert.strictEqual(skillGate[0].timeout, 90);
 const all = JSON.stringify(s);
 assert(!all.includes("/old/root"), "old root still present");
 assert(all.includes(orch), "scratch root missing");
