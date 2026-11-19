@@ -1,6 +1,6 @@
 #!/bin/bash
-# git-approval-gate.sh — PreToolUse hook: require in-session permission for git write ops
-# Blocks: git commit, git push, gh pr create
+# git-approval-gate.sh — PreToolUse hook: require in-session permission for git push and gh pr create
+# Holds: git push, gh pr create (commits pass)
 # Approval: a live dispatched worker's op is held for Helm and denied
 # (with a notification) at the deadline; anyone else gets the native Claude Code
 # permission prompt (yes/no). Yes runs the op, no stops it.
@@ -96,16 +96,14 @@ git_write_op() {
 }
 GIT_OP=$(git_write_op)
 
-if [[ -z "$GIT_OP" ]] && ! echo "$CMD" | grep -qE '\bgh\b[^;|&]*\bpr[[:space:]]+create\b|gsd-tools(\.cjs)?\s+query\s+commit\b|gsd_run\s+query\s+commit\b'; then
+# Commits (git commit, the GSD commit helper) are not held. Only a push or
+# `gh pr create` waits for approval.
+if [[ "$GIT_OP" != push ]] && ! echo "$CMD" | grep -qE '\bgh\b[^;|&]*\bpr[[:space:]]+create\b'; then
   exit 0
 fi
 
 # Determine which op for the prompt label
-if echo "$CMD" | grep -qE 'gsd-tools(\.cjs)?\s+query\s+commit\b|gsd_run\s+query\s+commit\b'; then
-  OP="GSD commit (gsd-tools query commit)"
-elif [[ "$GIT_OP" == commit ]]; then
-  OP="git commit"
-elif [[ "$GIT_OP" == push ]]; then
+if [[ "$GIT_OP" == push ]]; then
   OP="git push"
 else
   OP="gh pr create"

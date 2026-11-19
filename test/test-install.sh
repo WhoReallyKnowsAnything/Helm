@@ -206,7 +206,7 @@ HOME="$BH" bash "$INSTALL" >/dev/null 2>&1
 # the installed wrapper on a native Bash payload: silent for non-git, ask for git, never allow
 GP() { node -e 'process.stdout.write(JSON.stringify({tool_name:"Bash",tool_use_id:"toolu_i",cwd:"/tmp",tool_input:{command:process.argv[1]}}))' "$1" | HOME="$FH" bash "$FH/.claude/hooks/git-gate-wrapper.sh" 2>/dev/null; }
 [ -z "$(GP 'ls -la')" ] && pass "gate wrapper: non-git Bash command gets no output" || fail "gate wrapper: output for ls: $(GP 'ls -la')"
-for c in 'git commit -m x' 'git push origin main' 'gh pr create --title x'; do
+for c in 'git push origin main' 'gh pr create --title x'; do
   O=$(GP "$c")
   case "$O" in *'"allow"'*) fail "gate wrapper: '$c' got allow";; *'"permissionDecision":"ask"'*) pass "gate wrapper: '$c' gets ask";; *) fail "gate wrapper: '$c' got [$O]";; esac
 done

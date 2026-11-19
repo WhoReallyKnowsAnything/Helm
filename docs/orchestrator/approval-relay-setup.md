@@ -230,8 +230,8 @@ sweep found nothing to report and printed nothing, matching interactive
 
 `orchestration/hooks/git-approval-gate.sh` is a PreToolUse hook that holds a
 dispatched worker's git write op until Helm answers it, instead
-of a keystroke into the worker's pane. It holds `git commit`,
-`git push`, `gh pr create` and the GSD commit helper (`gsd-tools query commit`).
+of a keystroke into the worker's pane. It holds `git push` and
+`gh pr create`. Commits (`git commit` and the GSD commit helper) pass with no hold.
 It holds only dispatched workers: a session with no live worker row (your own
 sessions) gets the immediate native yes/no prompt, as before. The GitHub MCP
 writes (`push_files`, `create_pull_request`, `issue_write`) are not this hook's.

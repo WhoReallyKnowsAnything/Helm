@@ -116,7 +116,7 @@ struct WorkerActionsView: View {
     private var overrideLine: String? {
         switch overrideState {
         case .sending: return "Sending the capture request"
-        case .waiting: return "Sent. Waiting for the worker to commit the capture and mark done again (approve its commit on the hold card)"
+        case .waiting: return "Sent. Waiting for the worker to commit the capture and mark done again"
         case .refused(let why): return why
         case .idle, .granted: return nil
         }
