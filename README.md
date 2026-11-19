@@ -34,6 +34,7 @@ keep working exactly as they do in a terminal.
 - [The Cadence workflow area](#the-cadence-workflow-area)
 - [Safety model](#safety-model)
 - [Requirements](#requirements)
+- [Download](#download)
 - [Build and install](#build-and-install)
 - [Running the tests](#running-the-tests)
 - [Project layout](#project-layout)
@@ -258,6 +259,39 @@ The app is built so that no session can approve its own risky actions:
     IDs to `orchestration/install.sh` with `--notion-projects-ds` and
     `--notion-tasks-ds`, or put them in `notion.env` in the Helm support folder.
     Without them, Notion stays off.
+
+## Download
+
+Helm needs Apple silicon and macOS 27 or later, as Requirements says.
+
+1. Download `Helm-<version>.dmg` and `Helm-<version>.dmg.sha256` from the
+   [Releases page](https://github.com/WhoReallyKnowsAnything/Helm/releases).
+2. Check the download. Run this in the folder that holds both files. It must
+   print `OK`.
+
+   ```bash
+   shasum -a 256 -c Helm-<version>.dmg.sha256
+   ```
+
+3. Open the disk image. Drag Helm into Applications.
+
+   Warning: the app is ad-hoc signed and not notarized. macOS blocks the first
+   open. Do step 4 before step 5.
+
+4. Try to open `/Applications/Helm.app`. Then open System Settings > Privacy &
+   Security and click Open Anyway. Or run this command instead:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Helm.app
+   ```
+
+5. Open Helm once. It copies the orchestrator to
+   `~/Library/Application Support/Helm/orchestration`.
+6. Run `install.sh` from that folder. It needs `node`.
+
+   ```bash
+   "$HOME/Library/Application Support/Helm/orchestration/install.sh"
+   ```
 
 ## Build and install
 
