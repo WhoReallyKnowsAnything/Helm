@@ -23,7 +23,7 @@ struct SidebarView: View {
     var restoring: String? = nil
     /// The open chat's `Ctx: N%` line for the usage panel; nil on the tree (D-17).
     var contextText: String? = nil
-    /// The always-present "Terminal (Home)" item: opens a shell in the home folder (D-03).
+    /// The "Terminal (Home)" button in the usage panel: opens a shell in the home folder (D-03).
     var homeSelected = false
     var onHome: () -> Void = {}
 
@@ -33,8 +33,6 @@ struct SidebarView: View {
                 .overlay(alignment: .bottom) { Ink.border.frame(height: Metric.hairline) }
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    KitSidebarRow(title: "Terminal (Home)", id: "zsh", selected: homeSelected, action: onHome)
-                        .accessibilityLabel("Terminal (Home)")
                     ForEach(rows) { row in
                         KitSidebarRow(title: row.title, id: row.id, needsAttention: (alertCounts[row.id] ?? 0) > 0,
                                       selected: row.id == selected) { onSelect(row.id) }
@@ -51,7 +49,7 @@ struct SidebarView: View {
                 }
                 .padding(Space.sm)
             }
-            UsagePanelView(usage: usage, now: now, contextText: contextText)
+            UsagePanelView(usage: usage, now: now, contextText: contextText, homeSelected: homeSelected, onHome: onHome)
             if let failure { KitFooterLine { Text(failure) } }
         }
         .frame(maxHeight: .infinity, alignment: .top)
