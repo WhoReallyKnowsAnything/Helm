@@ -113,6 +113,17 @@ struct SidebarRenderTests {
         #expect(short <= 200 - 2 * Space.sm)
     }
 
+    /// The home item sits above the rows and stays on one line inside the minimum and default sidebars.
+    @Test(arguments: [200.0, 260.0])
+    func theHomeItemFitsOnOneLine(width: Double) {
+        let row = KitSidebarRow(title: "Terminal (Home)", id: "zsh", action: {})
+        #expect(fitting(row, width: nil).width <= width - 2 * Space.sm)
+        let sidebar = SidebarView(
+            newProject: newProject(running: false), rows: [], alertCounts: [:], selected: nil,
+            usage: UsageState(), now: Date(), failure: nil, onSelect: { _ in })
+        #expect(fitting(sidebar.frame(height: 300), width: width).width <= width)
+    }
+
     private func png<V: View>(_ view: V, width: CGFloat) throws -> Data {
         let rep = try RenderSupport.render(view, .fixed(CGSize(width: width, height: Metric.newProjectRowMinHeight)))
         return try #require(rep.representation(using: .png, properties: [:]))

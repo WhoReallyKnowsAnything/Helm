@@ -16,7 +16,8 @@ app shows all of them in one window, lets you talk to any of them, and puts
 every decision that needs a human (a git commit, a tool call, a question) in
 front of you as a card you can approve, deny or answer.
 
-There is no terminal window to watch. Every session is still the real
+Claude sessions never run in a terminal window. The one exception is a plain
+zsh shell for your own commands. Every session is still the real
 `claude` CLI, so your hooks, plugins, skills, MCP servers and approval gates
 keep working exactly as they do in a terminal.
 
@@ -55,7 +56,8 @@ Helm replaces that terminal flow with one window:
 - **See everything.** Every open project, its orchestrator and its workers,
   with a live status for each.
 - **Work in any session.** A native conversation view for every session, with
-  no visible terminal.
+  no terminal for Claude sessions (a plain zsh shell for your own commands
+  is the one exception).
 - **Decide in one place.** Permission prompts, git commits and questions from
   any worker arrive as cards in the app.
 - **Run a real workflow.** A board and stage screens for

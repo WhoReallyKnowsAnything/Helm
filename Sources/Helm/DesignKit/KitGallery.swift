@@ -125,6 +125,23 @@ struct KitGallery: View {
                               secondary: { Button("Change Notes") {}.buttonStyle(.kit) },
                               menu: { Button("cad-coverage 5") {} })
         },
+        KitPart("Board row") { _ in
+            KitBoardRow(number: "3", name: "Wire holds", stage: "planned") {}.frame(width: Space.xxxl * 16)
+        },
+        KitPart("Board row, dead worker") { _ in
+            KitBoardRow(number: "2", name: "Workflow screen redesign", stage: "verify", status: (.dead, "dead worker")) {
+                Button("Clear cad-verify-p2") {}.buttonStyle(.kit)
+            }
+            .frame(width: Space.xxxl * 16)
+        },
+        KitPart("Board row, hold mark and actions") { _ in
+            KitBoardRow(number: "3", name: "Wire holds", stage: "planned", cursor: true, status: (.running, "executing"),
+                        holdText: "git commit waiting") {
+                Button("Open Execute") {}.buttonStyle(.kit)
+                Button("decision-review") {}.buttonStyle(.kit)
+            }
+            .frame(width: Space.xxxl * 16)
+        },
     ]
 
     private static let stageTabs = ["Board", "Context", "Plan", "Execute", "Verify"].map { KitStageTab(id: $0.lowercased(), title: $0) }

@@ -13,6 +13,9 @@ struct DispatchBar: View {
     /// The "waiting on you" cue next to the name, set when a gate-hold banner opened this terminal (D-02).
     var showsWaitingCue = false
     let onBack: () -> Void
+    /// The Terminal button, shown on the tree screen only. Off by default.
+    var showsTerminal = false
+    var onTerminal: () -> Void = {}
     /// The Workflow button, shown on the tree screen only. Off by default.
     var showsWorkflow = false
     var onWorkflow: () -> Void = {}
@@ -44,6 +47,11 @@ struct DispatchBar: View {
                 Button(action: onWorkflow) { Text("Workflow") }
                     .buttonStyle(.kit)
                     .accessibilityLabel("Open workflow")
+            }
+            if showsTerminal {
+                Button(action: onTerminal) { Text("Terminal") }
+                    .buttonStyle(.kit)
+                    .accessibilityLabel("Open terminal")
             }
             if let sessionName {
                 Text(sessionName).kitType(.label).foregroundStyle(Ink.text).lineLimit(1)

@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Helm
 
@@ -260,5 +261,67 @@ import Testing
             #expect(nav.workflowPick == nil)
             #expect(nav.openEditor == nil)
         }
+    }
+}
+
+@Suite struct NavigationShellTests {
+    private let base = NavigationState.none.selecting("base")
+    private let home = NSHomeDirectory()
+
+    private func worker(_ key: String) -> WorkerTreeNode {
+        WorkerTreeNode(key: key, kind: .worker, title: key, taskTitle: nil, status: nil)
+    }
+
+    @Test func projectShellBackReturnsTheTree() {
+        let nav = base.openingShell(folder: "/p")
+        #expect(nav.screen == .shell(folder: "/p", origin: .tree))
+        #expect(nav.project == "base")
+        #expect(nav.goingBack() == base)
+    }
+
+    @Test func homeShellFromNoProjectBacksToNone() {
+        let nav = NavigationState.none.openingHomeShell()
+        #expect(nav.project == nil)
+        #expect(nav.screen == .shell(folder: home, origin: .tree))
+        #expect(nav.goingBack() == NavigationState.none)
+    }
+
+    @Test func homeShellFromAWorkerTerminalBacksToThatTerminal() {
+        let term = base.openingTerminal(of: worker("alpha"))
+        #expect(term.openingHomeShell().goingBack() == term)
+    }
+
+    @Test func oneShellAtATimeKeepsTheFirstOrigin() {
+        let project = base.openingShell(folder: "/p")
+        #expect(project.openingHomeShell().goingBack() == base)
+        #expect(project.openingShell(folder: "/p").goingBack() == base)
+        let homeNav = base.openingHomeShell()
+        #expect(homeNav.openingHomeShell() == homeNav)
+    }
+
+    @Test func holdBannerLeavesTheShell() {
+        let nav = base.openingShell(folder: "/p").openingFromHoldBanner(project: "base", label: "alpha")
+        #expect(nav.screen == .terminal(label: "alpha", waitingCue: true))
+    }
+
+    @Test func shellHasNoTerminalCues() {
+        let nav = base.openingShell(folder: "/p")
+        #expect(nav.canGoBack)
+        #expect(nav.terminalLabel == nil)
+        #expect(nav.workerLabel == nil)
+        #expect(!nav.showsWaitingCue)
+    }
+
+    @Test func switchingProjectOrClosingLeavesTheShell() {
+        let nav = base.openingShell(folder: "/p")
+        #expect(nav.selecting("other").screen == .tree)
+        #expect(nav.clickingSidebarRow("other").screen == .tree)
+        #expect(nav.clickingSidebarRow("base") == NavigationState.none)
+        #expect(nav.deselected() == NavigationState.none)
+    }
+
+    @Test func projectShellDoesNotOpenFromRoot() {
+        let root = NavigationState.none.selecting("r", root: true)
+        #expect(root.openingShell(folder: "/p") == root)
     }
 }

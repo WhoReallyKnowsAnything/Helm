@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-/// D-17: the app never types into or reads a tmux pane, and SwiftTerm stays out of the repo.
+/// D-17: the app never types into or reads a tmux pane, and only `Sources/Helm/Shell/` imports SwiftTerm (D-11).
 /// The tokens are built from parts so this file does not match its own scan.
 struct NoTerminalTests {
     private static let root = URL(fileURLWithPath: #filePath)
@@ -28,8 +28,10 @@ struct NoTerminalTests {
         #expect(hits(in: Self.root + "/Sources", tokens: Self.paneTokens) == [])
     }
 
-    @Test func nothingImportsSwiftTerm() {
-        let found = ["/Sources", "/Tests", "/Package.swift"].flatMap { hits(in: Self.root + $0, tokens: [Self.importToken]) }
+    @Test func onlyTheShellFolderImportsSwiftTerm() {
+        let allowed = Self.root + "/Sources/Helm/Shell/"
+        let found = ["/Sources", "/Tests"].flatMap { hits(in: Self.root + $0, tokens: [Self.importToken]) }
+            .filter { !$0.hasPrefix(allowed) }
         #expect(found == [])
     }
 }

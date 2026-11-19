@@ -14,6 +14,11 @@ enum Palette {
 
     static let black = ns(0x000000)
     static let white = ns(0xFFFFFF)
+    /// The 16 ANSI colours of the iTerm Default profile (sRGB, index 0-15).
+    static let ansi: [NSColor] = [
+        0x14191E, 0xB43C2A, 0x00C200, 0xC7C400, 0x2744C7, 0xC040BE, 0x00C5C7, 0xC7C7C7,
+        0x686868, 0xDD7975, 0x58E790, 0xECE100, 0xA7ABF2, 0xE17EE1, 0x60FDFF, 0xFFFFFF,
+    ].map(ns)
     // Neutral greys of the Terminal craft look (D-13a).
     static let gray950 = ns(0x0E0E0F)
     static let gray900 = ns(0x121213)
@@ -79,6 +84,10 @@ enum Ink {
     static let sidebarNS = Palette.gray900
     /// Text on a light accent fill (lime, yellow and mint): the ground.
     static let onAccentDarkNS = Palette.gray950
+    /// Terminal colours as NSColor, for the shell view. Black with white text matches the iTerm Default profile.
+    static let terminalNS = Palette.black
+    static let terminalTextNS = Palette.white
+    static let terminalPaletteNS = Palette.ansi
 
     static let background = Color(nsColor: Palette.gray950)
     static let sidebar = Color(nsColor: sidebarNS)
@@ -154,6 +163,9 @@ enum Ink {
 
 enum Metric {
     static let corner: CGFloat = 3
+    /// The shell view font: the name and the point size.
+    static let terminalFontName = "Menlo-Regular"
+    static let terminalFontSize: CGFloat = 15
     /// Width of the sidebar splitter, inherited from v1.
     static let splitter: CGFloat = 5
     static let headerBar: CGFloat = 36

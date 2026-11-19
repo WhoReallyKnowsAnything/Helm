@@ -16,6 +16,9 @@ struct NavigationState: Equatable {
         /// The editor screen of one file. `path` is the file path as text, `line` the 1-based line to open at,
         /// `origin` the screen the link was on, so Back returns to it.
         indirect case editor(path: String, line: Int?, origin: Screen)
+        /// A plain zsh shell in `folder` (the project folder, or home). `origin` is the screen it was opened from, so Back returns to it.
+        /// It is its own screen: `.terminal` and `.root` still mean the conversation view.
+        indirect case shell(folder: String, origin: Screen)
     }
 
     let project: String?
@@ -61,6 +64,29 @@ struct NavigationState: Equatable {
         return NavigationState(project: project, screen: .workflow(phase: phase, tab: tab))
     }
 
+    /// Opens the shell in a project's folder. Needs a selected project, not a root. One shell at a time: from a shell it keeps that shell's origin.
+    func openingShell(folder: String) -> NavigationState {
+        guard let project, screen != .root else { return self }
+        return NavigationState(project: project, screen: .shell(folder: folder, origin: shellOrigin))
+    }
+
+    /// Opens the shell in the home folder (D-05). Works in every state and keeps the project it found.
+    func openingHomeShell() -> NavigationState {
+        if case .shell(NSHomeDirectory(), _) = screen { return self }
+        return NavigationState(project: project, screen: .shell(folder: NSHomeDirectory(), origin: shellOrigin))
+    }
+
+    /// True while the home shell is the screen, so the sidebar item shows selected.
+    var showsHomeShell: Bool {
+        if case .shell(NSHomeDirectory(), _) = screen { return true }
+        return false
+    }
+
+    private var shellOrigin: Screen {
+        if case .shell(_, let origin) = screen { return origin }
+        return screen
+    }
+
     /// A code file link. Needs a selected project that is not a root. The current screen becomes the origin.
     func openingEditor(path: String, line: Int?) -> NavigationState {
         guard let project, screen != .root else { return self }
@@ -70,6 +96,7 @@ struct NavigationState: Equatable {
     /// Back. The editor returns its origin screen of the same project. Any other screen that can go back acts like `showingTree()`.
     func goingBack() -> NavigationState {
         if case .editor(_, _, let origin) = screen { return NavigationState(project: project, screen: origin) }
+        if case .shell(_, let origin) = screen { return NavigationState(project: project, screen: origin) }
         return canGoBack ? showingTree() : self
     }
 
@@ -79,7 +106,7 @@ struct NavigationState: Equatable {
         if project == id {
             switch screen {
             case .root, .workflow, .editor: return self
-            case .tree, .terminal: break
+            case .tree, .terminal, .shell: break
             }
         }
         return NavigationState(project: id, screen: .terminal(label: label, waitingCue: true))
@@ -93,7 +120,7 @@ struct NavigationState: Equatable {
     /// Back applies on a terminal screen and on the workflow screen.
     var canGoBack: Bool {
         switch screen {
-        case .terminal, .workflow, .editor: return true
+        case .terminal, .workflow, .editor, .shell: return true
         case .tree, .root: return false
         }
     }
@@ -117,7 +144,7 @@ struct NavigationState: Equatable {
         switch screen {
         case .terminal(let label, _): return label
         case .root: return WorkerTree.orchestratorKey
-        case .tree, .workflow, .editor: return nil
+        case .tree, .workflow, .editor, .shell: return nil
         }
     }
 
