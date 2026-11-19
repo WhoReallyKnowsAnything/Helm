@@ -139,7 +139,7 @@ the same way if you use them. Helm does not need them.
 
 - **Permission cards.** A tool call that needs approval shows Allow and Deny.
   Allow works at once.
-- **Hold cards.** Every `git commit`, `git push` and `gh pr create` that a
+- **Hold cards.** Every `git push` and `gh pr create` that a
   worker runs is held by the git approval gate until you press Approve or
   Deny. The card shows on the worker's tree node and at the top of every
   session view in that project.
@@ -210,7 +210,7 @@ The app follows Cadence 4.3's layout, where run records live under
 The app is built so that no session can approve its own risky actions:
 
 - **Git operations need a person.** The orchestrator's git approval gate holds
-  every commit and push from a worker until you press Approve or Deny in the
+  every push and pull request creation from a worker until you press Approve or Deny in the
   app. A hold that nobody answers is denied after 600 seconds; it never falls
   back to "allow".
 - **No back door.** The app has no HTTP endpoint, socket, URL scheme or
@@ -243,7 +243,7 @@ The app is built so that no session can approve its own risky actions:
 - Optional, and Helm works without each of them:
   - **lean-ctx.** The git approval gate covers both Claude Code's native `Bash`
     tool and lean-ctx's shell tool. Without lean-ctx, workers run git through
-    `Bash` and the gate holds those commits and pushes in the same way. The
+    `Bash` and the gate holds those pushes in the same way. The
     install step adds the `Bash` gate to `~/.claude/settings.json` unless a
     gate for `Bash` already exists there or in `~/.claude/settings.local.json`.
   - **[Terminus](https://github.com/crenshawdev/terminus).** A local memory

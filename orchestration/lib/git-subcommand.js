@@ -70,12 +70,12 @@ function classify(cmd, depth) {
   let found = '';
   for (const s of segs) {
     const r = subcommand(s);
-    if (r === 'commit') return 'commit';
+    if (r === 'push') return 'push';
     if (r) found = r;
   }
   for (const q of quoted) {
     const r = classify(q, depth + 1);
-    if (r === 'commit') return 'commit';
+    if (r === 'push') return 'push';
     if (r) found = r;
   }
   return found;
