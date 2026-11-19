@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Hosted macOS 27 image: Aqua session and Finder answer with no prompt (spikes 1 to 3). gh is preinstalled.
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The build number counts history, and release.sh refuses a shallow clone.
+          fetch-depth: 0
+      - name: Build, pack and upload the release
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/release.sh "$TAG" --upload
