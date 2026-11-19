@@ -18,8 +18,14 @@ jobs:
         with:
           # The build number counts history, and release.sh refuses a shallow clone.
           fetch-depth: 0
-      - name: Build, pack and upload the release
+          persist-credentials: false
+      - name: Build and pack the release
+        env:
+          TAG: ${{ github.ref_name }}
+        run: scripts/release.sh "$TAG"
+      # Only this step holds the token: it runs gh and nothing that builds.
+      - name: Upload the release
         env:
           TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ github.token }}
-        run: scripts/release.sh "$TAG" --upload
+        run: scripts/release.sh "$TAG" --upload-only

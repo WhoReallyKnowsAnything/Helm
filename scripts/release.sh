@@ -5,6 +5,7 @@
 #
 # --out <folder>  where Helm-<version>.dmg and Helm-<version>.dmg.sha256 go; build/release otherwise
 # --upload        create the GitHub release for the tag (or, if it exists, replace its two files) with gh
+# --upload-only   send the two files an earlier run built to --out (no build); CI runs it as its own step
 # Any other option goes to make-dmg.sh unchanged (--identity, --notary-profile: the hook for later).
 #
 # Local release path: Finder lays out the disk image window, so this needs a Mac with a logged-in desktop.
@@ -24,11 +25,13 @@ TAG="${1:-}"
 shift
 OUT="$ROOT/build/release"
 UPLOAD=0
+UPLOAD_ONLY=0
 PASS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --out) [[ -n "${2:-}" ]] || fail "--out needs a folder."; OUT="$2"; shift 2 ;;
     --upload) UPLOAD=1; shift ;;
+    --upload-only) UPLOAD=1; UPLOAD_ONLY=1; shift ;;
     *) PASS+=("$1"); shift ;;
   esac
 done
@@ -45,6 +48,23 @@ BUILD="$(git -C "$ROOT" rev-list --count "$TAG")"
 APP="$ROOT/build/Helm.app"
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
+DMG="Helm-$VERSION.dmg"
+
+upload_release() {
+  if gh release view "$TAG" > /dev/null 2>&1; then
+    gh release upload "$TAG" "$OUT/$DMG" "$OUT/$DMG.sha256" --clobber
+  else
+    gh release create "$TAG" "$OUT/$DMG" "$OUT/$DMG.sha256" --title "Helm $VERSION" --generate-notes
+  fi
+}
+
+# --upload-only sends the files an earlier run built. CI uses it so only this step holds the GitHub token.
+if [[ "$UPLOAD_ONLY" -eq 1 ]]; then
+  [[ -f "$OUT/$DMG" && -f "$OUT/$DMG.sha256" ]] || fail "$OUT has no $DMG and $DMG.sha256 to upload. Build first."
+  upload_release
+  echo "$OUT/$DMG"
+  exit 0
+fi
 
 # bundle-app.sh installs too; point it at a scratch folder so /Applications and the live app stay untouched.
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/helm-release.XXXXXX")"
@@ -60,14 +80,9 @@ ARCHS="$(lipo -archs "$APP/Contents/MacOS/Helm")"
 [[ "$ARCHS" == "arm64" ]] || fail "the app is built for \"$ARCHS\", and a release is arm64 only."
 
 "$ROOT/scripts/make-dmg.sh" "$APP" --out "$OUT" ${PASS[@]+"${PASS[@]}"}
-DMG="Helm-$VERSION.dmg"
 (cd "$OUT" && shasum -a 256 "$DMG" > "$DMG.sha256")
 
 if [[ "$UPLOAD" -eq 1 ]]; then
-  if gh release view "$TAG" > /dev/null 2>&1; then
-    gh release upload "$TAG" "$OUT/$DMG" "$OUT/$DMG.sha256" --clobber
-  else
-    gh release create "$TAG" "$OUT/$DMG" "$OUT/$DMG.sha256" --title "Helm $VERSION" --generate-notes
-  fi
+  upload_release
 fi
 echo "$OUT/$DMG"

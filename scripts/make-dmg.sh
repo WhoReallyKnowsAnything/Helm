@@ -304,6 +304,13 @@ on run argv
             set background picture of viewOptions to file ".background:background.tiff"
             set position of item appName of container window to {appX, iconY}
             set position of item "Applications" of container window to {applicationsX, iconY}
+            -- Park the dot items far outside the window, so "show hidden files" never shows them over the title
+            set parkX to windowSize + 400
+            set position of item ".background" of container window to {parkX, parkX}
+            set position of item ".VolumeIcon.icns" of container window to {parkX, parkX}
+            try
+                set position of item ".fseventsd" of container window to {parkX, parkX}
+            end try
             update without registering applications
             delay 2
             close
@@ -346,11 +353,18 @@ sizeMb=$(( $(du -sm "$stageDir" | cut -f 1) + 20 ))
 hdiutil create -quiet -volname "$NAME" -srcfolder "$stageDir" -fs HFS+ -format UDRW -size "${sizeMb}m" -ov "$rwImage"
 mountPoint="$(hdiutil attach -readwrite -noverify -noautoopen "$rwImage" | awk -F'\t' '/\/Volumes\// { print $NF }')"
 [[ -d "$mountPoint" ]] || fail "couldn't open the disk image to lay out its window."
+# The disk's own icon goes on before Finder lays out the window, so Finder sees it and the layout can park it
+# off screen. Both dot items are also flagged hidden: with "show hidden files" on they still never show.
+cp "$volumeIcns" "$mountPoint/.VolumeIcon.icns"
+chflags hidden "$mountPoint/.VolumeIcon.icns" "$mountPoint/.background"
 osascript "$work/Window.applescript" "$(basename "$mountPoint")" "$appFile" "$WINDOW_SIZE" "$ICON_SIZE" "$LABEL_SIZE" \
     "$ICON_Y" "$APP_X" "$APPLICATIONS_X" || fail "Finder couldn't lay out the disk image's window."
-# The disk's own icon, after Finder is done with the window (Finder drops it otherwise)
+# Finder removes .VolumeIcon.icns and the custom-icon flag while it lays out the window (spike 4: the file was
+# gone from the final image). Put the file back hidden; its parked position stays in the .DS_Store.
 cp "$volumeIcns" "$mountPoint/.VolumeIcon.icns"
+chflags hidden "$mountPoint/.VolumeIcon.icns"
 SetFile -a C "$mountPoint"
+[[ "$mountPoint" == /Volumes/?* ]] || fail "the mount point \"$mountPoint\" is not under /Volumes, so .fseventsd is not removed."
 rm -rf "$mountPoint/.fseventsd"
 sync
 # Finder or an indexer can still hold the volume for a moment: hdiutil then exits 16 (busy). Retry, then force.
