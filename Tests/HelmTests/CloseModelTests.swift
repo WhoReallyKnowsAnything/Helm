@@ -51,6 +51,17 @@ private final class Calls: @unchecked Sendable {
         #expect(calls.all.isEmpty)
     }
 
+    @Test func dismissingTheAlertWithoutTakingNeverStops() async {
+        let calls = Calls()
+        let model = model(calls)
+        model.ask(SessionRow(id: "a", title: "A"), in: snapshot)
+        model.cancel()
+        model.cancel()
+        #expect(await model.confirm(nil) == nil)
+        #expect(model.failure == nil)
+        #expect(calls.all.isEmpty)
+    }
+
     @Test func confirmStopsThatProjectOnceAndReturnsItsId() async {
         let calls = Calls()
         let model = model(calls)

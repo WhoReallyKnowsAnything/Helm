@@ -406,7 +406,9 @@ struct ContentView: View {
             restoring: restorer.running,
             contextText: UsagePanelView.contextLine(
                 chatOpen: nav.terminalLabel != nil,
-                percent: outLogPath().flatMap { logStatus.entries[$0]?.fold.contextPercent })
+                percent: outLogPath().flatMap { logStatus.entries[$0]?.fold.contextPercent }),
+            homeSelected: nav.showsHomeShell,
+            onHome: { nav = nav.openingHomeShell() }
         )
         .alert(
             "Could not restore \(restorer.failure?.title ?? "")",
@@ -436,7 +438,9 @@ struct ContentView: View {
                     await store.refresh()
                 }
             }
+            .accessibilityIdentifier("close-project-confirm")
             Button("Cancel", role: .cancel) {}
+                .accessibilityIdentifier("close-project-cancel")
         } message: {
             Text(closer.pending?.message ?? "")
         }
@@ -470,7 +474,12 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var main: some View {
-        if let id = selection {
+        if case .shell(let folder, _) = nav.screen, nav.showsHomeShell {
+            VStack(spacing: Space.none) {
+                DispatchBar(showsBack: true, showsActions: false, onBack: { nav = nav.goingBack() }, onClose: {})
+                ShellPane(folder: folder).id("shell-\(folder)").frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else if let id = selection {
             VStack(spacing: Space.none) {
                 if projectFolder != nil || nav.canGoBack { dispatchBar(id) }
                 // The tree or one terminal fills the area, never both (D-02).
@@ -553,8 +562,7 @@ struct ContentView: View {
                                               onClear: { label in Task { await workflow.clear(label) } },
                                               phase: phase,
                                               executePhases: workflow.executeOpen, onOpenExecute: { nav = nav.openingWorkflow(phase: $0, tab: "execute") },
-                                              onOpenRunRecord: { nav = nav.pickingTab("run") },
-                                              onOpenMilestone: { nav = nav.pickingTab("milestone") },
+                                              holds: holds.holds,
                                               onPress: { Task { await workflow.press() } },
                                               onChip: { chip in Task { await workflow.pressChip(chip) } },
                                               onOverride: { await workflow.sendOverride(reason: $0) })
@@ -565,6 +573,12 @@ struct ContentView: View {
                     panel(id).frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .editor(let path, let line, _):
                     EditorView(path: path, line: line, project: projectFolder, rows: editorRows)
+                case .shell(let folder, _):
+                    if projectFolder == nil {
+                        KitNotice(text: "This project has no folder, so no terminal opens.").padding(Space.xxxl)
+                    } else {
+                        ShellPane(folder: folder).id("shell-\(folder)").frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
                 if nav.showsDispatchBar(hasFolder: projectFolder != nil) {
                     DispatchPromptBar(base: id, onOpenSheet: { dispatchOpen = true }, onSent: { nav = nav.showingTree() }).id(id)
@@ -591,6 +605,8 @@ struct ContentView: View {
             showsBack: nav.canGoBack, showsActions: projectFolder != nil, waiting: counts.waiting, running: counts.running,
             sessionName: nav.terminalLabel == nil ? nil : target, showsWaitingCue: nav.showsWaitingCue,
             onBack: { nav = nav.goingBack() },
+            showsTerminal: nav.screen == .tree && projectFolder != nil,
+            onTerminal: { if let folder = projectFolder { nav = nav.openingShell(folder: folder) } },
             showsWorkflow: nav.screen == .tree && projectFolder != nil,
             onWorkflow: {
                 let rows = workflow.board?.rows ?? []

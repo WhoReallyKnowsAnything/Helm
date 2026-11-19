@@ -14,8 +14,8 @@ struct WorkflowBoardView: View {
     var phase: String?
     var executePhases: Set<String> = []
     var onOpenExecute: (String) -> Void = { _ in }
-    var onOpenRunRecord: () -> Void = {}
-    var onOpenMilestone: () -> Void = {}
+    /// Gate holds shown read-only on their phase row. Approve and Deny stay in the project hold bar (D-02).
+    var holds: [GateHold] = []
     var onPress: () -> Void = {}
     var onChip: (CadenceChip) -> Void = { _ in }
     /// True when the line was sent, so the field clears. The reason lives only in this view's state.
@@ -30,11 +30,11 @@ struct WorkflowBoardView: View {
         } else if let board {
             VStack(alignment: .leading, spacing: Space.sm) {
                 KitStageActionRow(primaryTitle: panel?.next.map { "Next: \($0.stage.rawValue.capitalized)" } ?? "Next",
-                                  primaryReason: primaryReason, menuTitle: board.chips.isEmpty ? nil : "Suggested",
-                                  onPrimary: onPress, secondary: { secondary(board) }, menu: { chipItems(board) })
+                                  primaryReason: primaryReason, menuTitle: menuChips.isEmpty ? nil : "Suggested",
+                                  onPrimary: onPress, secondary: { secondary(board) }, menu: { chipItems(menuChips) })
                 ScrollView {
                     VStack(alignment: .leading, spacing: Space.sm) {
-                        Text(board.milestone).kitType(.meta).foregroundStyle(Ink.textSecondary)
+                        Text("\(board.milestone)  \(WorkflowBoardRows.progress(board))").kitType(.meta).foregroundStyle(Ink.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                         if let health = board.health { healthStrip(health) }
                         if !collapsed { details(board) }
@@ -47,6 +47,9 @@ struct WorkflowBoardView: View {
     }
 
     private var primaryReason: String? { panel.nextReason(phase: phase) }
+    private var menuChips: [CadenceChip] {
+        board.map { WorkflowBoardRows.splitChips($0.chips, rows: $0.rows).menu } ?? []
+    }
 
     @ViewBuilder private func secondary(_ board: WorkflowBoard) -> some View {
         if panel?.override != nil {
@@ -59,15 +62,10 @@ struct WorkflowBoardView: View {
             }
         }
         Button { collapsed.toggle() } label: { Text(collapsed ? "Show" : "Hide") }.buttonStyle(.kit)
-        Button { onOpenRunRecord() } label: { Text("Run Record") }.buttonStyle(.kit)
-        // Not tied to nextStage: that is none once the cycle is closed (D-06).
-        if board.status?.phases.isEmpty == false {
-            Button { onOpenMilestone() } label: { Text("Open Milestone") }.buttonStyle(.kit)
-        }
     }
 
-    @ViewBuilder private func chipItems(_ board: WorkflowBoard) -> some View {
-        ForEach(board.chips, id: \.label) { chip in
+    @ViewBuilder private func chipItems(_ chips: [CadenceChip]) -> some View {
+        ForEach(chips, id: \.label) { chip in
             let name = chip.skill.replacingOccurrences(of: "/cadence:", with: "")
             let head = chip.phase.map { "\(name) \($0)" } ?? name
             Button { onChip(chip) } label: {
@@ -80,17 +78,17 @@ struct WorkflowBoardView: View {
     private func details(_ board: WorkflowBoard) -> some View {
         VStack(alignment: .leading, spacing: Space.sm) {
             if let check = board.configCheck { configCheck(check) }
+            let split = WorkflowBoardRows.splitChips(board.chips, rows: board.rows)
             ForEach(Array(board.rows.enumerated()), id: \.offset) { _, row in
                 let overlay = overlays[row.n]
-                HStack(spacing: Space.sm) {
-                    Text("\(row.n == panel?.next?.phase ? ">" : " ") \(row.n)  \(row.name)  \(overlay?.text ?? label(row.display))")
-                        .kitType(.meta)
-                        .foregroundStyle(Ink.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                let hold = WorkflowBoardRows.holds(holds, phase: row.n).first
+                KitBoardRow(number: row.n, name: row.name, stage: label(row.display), cursor: row.n == panel?.next?.phase,
+                            status: overlay.map(WorkflowBoardRows.mark), holdText: hold.map { "hold: \($0.label)" }) {
                     if let overlay, overlay.state == .dead { clearButton(overlay.label) }
                     if executePhases.contains(row.n) {
                         Button { onOpenExecute(row.n) } label: { Text("Open Execute") }.buttonStyle(.kit)
                     }
+                    ForEach(split.onRows[row.n] ?? [], id: \.label) { chipButton($0) }
                 }
             }
             if let held, !overlays.values.contains(where: { $0.label == held && $0.state == .dead }) { clearButton(held) }
@@ -158,6 +156,13 @@ struct WorkflowBoardView: View {
                 ForEach(found.warnings, id: \.self) { Text($0).kitType(.meta).foregroundStyle(Ink.waiting) }
             }
         }
+    }
+
+    private func chipButton(_ chip: CadenceChip) -> some View {
+        Button { onChip(chip) } label: { Text(chip.skill.replacingOccurrences(of: "/cadence:cad-", with: "")) }
+            .buttonStyle(.kit)
+            .disabled(panel?.chipsOff != nil)
+            .help([chip.rule, panel?.utilityText, chip.innerRole].compactMap { $0 }.joined(separator: " | "))
     }
 
     private func clearButton(_ label: String) -> some View {

@@ -23,6 +23,9 @@ struct SidebarView: View {
     var restoring: String? = nil
     /// The open chat's `Ctx: N%` line for the usage panel; nil on the tree (D-17).
     var contextText: String? = nil
+    /// The always-present "Terminal (Home)" item: opens a shell in the home folder (D-03).
+    var homeSelected = false
+    var onHome: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.none) {
@@ -30,6 +33,8 @@ struct SidebarView: View {
                 .overlay(alignment: .bottom) { Ink.border.frame(height: Metric.hairline) }
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xs) {
+                    KitSidebarRow(title: "Terminal (Home)", id: "zsh", selected: homeSelected, action: onHome)
+                        .accessibilityLabel("Terminal (Home)")
                     ForEach(rows) { row in
                         KitSidebarRow(title: row.title, id: row.id, needsAttention: (alertCounts[row.id] ?? 0) > 0,
                                       selected: row.id == selected) { onSelect(row.id) }

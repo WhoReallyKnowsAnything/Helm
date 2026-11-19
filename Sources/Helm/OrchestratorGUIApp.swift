@@ -37,6 +37,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
     }
 
+    /// Runs once the quit is final (after any Cancel), on every quit path. `QuitModel` does not cover the shell (D-07).
+    func applicationWillTerminate(_ notification: Notification) {
+        ShellSession.stopLive()
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let store else { return .terminateNow }
         // shouldQuit returns on every path, so the reply below is sent exactly once.
