@@ -18,24 +18,29 @@ enum KitIcon: String, CaseIterable {
     case stop = "stop.circle"
     case delete = "trash"
     case close = "xmark"
+    case terminal = "terminal"
 
     static let size: CGFloat = 12
+    /// The one larger size, for a lone icon button that stands by itself (the home terminal button).
+    static let largeSize: CGFloat = 20
 }
 
 /// Replaces `Image(systemName:)`.
 struct KitImage: View {
     let icon: KitIcon
     var filled = false
+    var large = false
 
-    init(_ icon: KitIcon, filled: Bool = false) {
+    init(_ icon: KitIcon, filled: Bool = false, large: Bool = false) {
         self.icon = icon
         self.filled = filled
+        self.large = large
     }
 
     var body: some View {
         Image(systemName: icon.rawValue)
             .symbolVariant(filled ? .fill : .none)
-            .font(.system(size: KitIcon.size, weight: .regular))
+            .font(.system(size: large ? KitIcon.largeSize : KitIcon.size, weight: .regular))
     }
 }
 

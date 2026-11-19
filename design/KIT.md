@@ -131,7 +131,7 @@ Views set fonts only through `.kitType(...)`.
 
 ## Icons
 
-Source: SF Symbols, wrapped in `KitIcon` (one case per symbol the app uses). Views name a `KitIcon`, never an SF Symbol string. Size 12, one weight (regular), filled form for a selected row only. The icon sits beside its label with `Space.xs` between.
+Source: SF Symbols, wrapped in `KitIcon` (one case per symbol the app uses). Views name a `KitIcon`, never an SF Symbol string. Size 12 (`KitIcon.size`), one weight (regular), filled form for a selected row only. One larger size, 20 (`KitIcon.largeSize`, via `KitImage(_, large: true)`), is for a lone icon button that has no label beside it: the home terminal button in the usage panel, which is bottom-aligned so it stays still when the Ctx line shows. The icon sits beside its label with `Space.xs` between.
 
 ## Window
 

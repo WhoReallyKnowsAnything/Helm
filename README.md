@@ -163,6 +163,18 @@ the same way if you use them. Helm does not need them.
 - A banner warns you when the file changed on disk, and a worker's files open
   read-only.
 
+### Terminal
+
+- A plain zsh shell inside the app, for your own commands (git, builds).
+- Open it in a project's folder with the **Open terminal** button on that
+  project, or in your home folder with the terminal button at the bottom of
+  the sidebar, beside the usage lines.
+- The shell starts as a login shell (`zsh -l`), with colours, resize and
+  scrollback. Leaving the screen, closing the project or quitting the app
+  stops the shell, so no stray zsh keeps running.
+- Only your shell runs here. Claude sessions always stay in the native
+  conversation view.
+
 ## The Cadence workflow area
 
 [Cadence](https://github.com/crenshawdev/cadence) is a Claude Code plugin for
@@ -175,7 +187,7 @@ The workflow area is one shell with a phase picker and a tab per stage:
 
 | Tab | What it shows |
 |---|---|
-| **Board** | Every phase of the current milestone and the stage it is in. One primary **Next** button starts the next stage with the right model and effort. |
+| **Board** | One row per phase of the current milestone, with the milestone's "N of M" progress, each phase's stage, its worker's status (running, waiting to merge, ended, question waiting, plan ready) and a read-only mark for any held git operation. One primary **Next** button starts the next stage with the right model and effort. Phase checks (coverage, minimalism review, decision review) are 1-click buttons on their row; project-wide checks (suggest, health, audit) are in the **Suggested** menu. Approve and Deny stay in the project's hold bar. |
 | **Context** | The gray areas Cadence asks about, as cards you answer, and the decisions and acceptance criteria it records. |
 | **Plan** | The phase plans, the plan check and the plan review. **Approve** moves on to execute. |
 | **Execute** | Live progress of an execute run: waves, plans, each plan's commits and any checkpoint that needs you. |
@@ -342,6 +354,7 @@ Cadence:
 | v3 | The Cadence workflow board, health strip, Context, Plan review and UAT screens |
 | v4 | Execute progress, run record, milestone and land screens, the code editor, and the one-shell workflow redesign |
 | v5 | Support for Cadence 4.3's record layout, and a set of fixes and polish |
+| v8 | A plain zsh terminal screen (project folder and home folder) and the redesigned workflow board |
 
 The planning history lives in the private development repo. This public repo
 does not include it.

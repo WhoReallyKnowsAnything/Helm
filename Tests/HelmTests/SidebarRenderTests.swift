@@ -113,15 +113,59 @@ struct SidebarRenderTests {
         #expect(short <= 200 - 2 * Space.sm)
     }
 
-    /// The home item sits above the rows and stays on one line inside the minimum and default sidebars.
+    /// The home terminal is an icon button in the usage panel (not a sidebar row). It adds no height
+    /// and fits inside the minimum and default sidebars, and the selected look differs from the idle one.
     @Test(arguments: [200.0, 260.0])
-    func theHomeItemFitsOnOneLine(width: Double) {
-        let row = KitSidebarRow(title: "Terminal (Home)", id: "zsh", action: {})
-        #expect(fitting(row, width: nil).width <= width - 2 * Space.sm)
+    func theHomeButtonSitsInTheUsagePanel(width: Double) throws {
+        let now = Date()
+        let usage = UsageState(fiveHour: UsageWindow(usedPercentage: 8, resetsAt: now.addingTimeInterval(3600), sampled: now))
+        let bare = fitting(UsagePanelView(usage: usage, now: now, contextText: "Ctx: 42%"), width: width)
+        let withButton = fitting(UsagePanelView(usage: usage, now: now, contextText: "Ctx: 42%", onHome: {}), width: width)
+        #expect(withButton.width <= width && withButton.height == bare.height)
+        func panelPNG(selected: Bool) throws -> Data {
+            let view = UsagePanelView(usage: usage, now: now, homeSelected: selected, onHome: {}).background(Ink.sidebar)
+            let rep = try RenderSupport.render(view, .fixed(CGSize(width: width, height: 80)))
+            return try #require(rep.representation(using: .png, properties: [:]))
+        }
+        #expect(try panelPNG(selected: false) != panelPNG(selected: true))
         let sidebar = SidebarView(
             newProject: newProject(running: false), rows: [], alertCounts: [:], selected: nil,
-            usage: UsageState(), now: Date(), failure: nil, onSelect: { _ in })
+            usage: UsageState(), now: now, failure: nil, onSelect: { _ in })
         #expect(fitting(sidebar.frame(height: 300), width: width).width <= width)
+    }
+
+    /// The right-hand strip of a rendered panel, `rows` pixel rows up from the panel's bottom edge. Only the home button
+    /// draws there, so equal strips mean the button has the same place and size from the bottom.
+    private func buttonStrip(contextText: String?, width: CGFloat, rows: Int) throws -> (pixels: [[Int]], panelRows: Int, scale: Int) {
+        let now = Date()
+        let usage = UsageState(fiveHour: UsageWindow(usedPercentage: 8, resetsAt: now.addingTimeInterval(3600), sampled: now))
+        let rep = try RenderSupport.render(UsagePanelView(usage: usage, now: now, contextText: contextText, onHome: {}), .content(width: width))
+        let scale = rep.pixelsWide / Int(width)
+        var pixels: [[Int]] = []
+        for y in (rep.pixelsHigh - rows)..<rep.pixelsHigh {
+            for x in (rep.pixelsWide - 40 * scale)..<rep.pixelsWide {
+                var p = [Int](repeating: 0, count: 4)
+                rep.getPixel(&p, atX: x, y: y)
+                pixels.append(p)
+            }
+        }
+        return (pixels, rep.pixelsHigh, scale)
+    }
+
+    /// The home button never moves when the `Ctx: N%` line shows or hides, and is bigger than the 12 pt kit icon.
+    @Test(arguments: [200.0, 260.0])
+    func theHomeButtonStaysPutWhenCtxShows(width: Double) throws {
+        let probe = try buttonStrip(contextText: nil, width: width, rows: 1)
+        let rows = probe.panelRows - 4 * probe.scale // skip the panel's own top rule
+        let without = try buttonStrip(contextText: nil, width: width, rows: rows)
+        let with = try buttonStrip(contextText: "Ctx: 42%", width: width, rows: rows)
+        #expect(with.panelRows > without.panelRows)
+        #expect(with.pixels == without.pixels)
+        let background = without.pixels[0]
+        let inked = without.pixels.indices.filter { without.pixels[$0] != background }
+        let columns = Set(inked.map { $0 % (40 * without.scale) })
+        let glyphWidth = (columns.max() ?? 0) - (columns.min() ?? 0) + 1
+        #expect(glyphWidth > Int(KitIcon.size) * without.scale * 3 / 2)
     }
 
     private func png<V: View>(_ view: V, width: CGFloat) throws -> Data {

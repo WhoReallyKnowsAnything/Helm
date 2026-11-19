@@ -7,6 +7,9 @@ struct UsagePanelView: View {
     let now: Date
     /// The open chat's `Ctx: N%` line (D-17), drawn above the limits. Nil hides it.
     var contextText: String? = nil
+    /// The home terminal button (D-03): opens a shell in the home folder. Selected while that shell is open.
+    var homeSelected = false
+    var onHome: () -> Void = {}
 
     /// The line for an open chat with a known percent; nil on the tree or before the first `result`.
     static func contextLine(chatOpen: Bool, percent: Int?) -> String? {
@@ -26,11 +29,21 @@ struct UsagePanelView: View {
 
     var body: some View {
         KitFooterLine {
-            if let contextText { Text(contextText) }
-            ForEach(Self.limitLines(usage, now: now), id: \.self) { Text($0) }
+            // Bottom-aligned: the last limit line never moves, so the button stays put when the Ctx line shows.
+            HStack(alignment: .bottom, spacing: Space.sm) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    if let contextText { Text(contextText) }
+                    ForEach(Self.limitLines(usage, now: now), id: \.self) { Text($0) }
+                }
+                .accessibilityElement(children: .combine)
+                Spacer(minLength: 0)
+                Button(action: onHome) { KitImage(.terminal, filled: homeSelected, large: true) }
+                    .buttonStyle(KitButtonStyle(kind: homeSelected ? .primary : .standard))
+                    .help("Terminal (Home)")
+                    .accessibilityLabel("Terminal (Home)")
+            }
         }
         .fixedSize(horizontal: false, vertical: true)
-        .accessibilityElement(children: .combine)
     }
 
     /// A time of day within the next 24 hours, else weekday plus time, in the user's locale.
