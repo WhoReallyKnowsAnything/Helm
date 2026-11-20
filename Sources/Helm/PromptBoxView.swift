@@ -102,6 +102,9 @@ struct PromptBoxView: View {
         .overlay(alignment: .top) { Ink.border.frame(height: Metric.hairline) }
         .onAppear { claimFocus(); clickReclaim.install { claimFocus() } }
         .onDisappear { clickReclaim.remove() }
+        // The box can appear disabled, or under a card, and be free later: no other trigger fires then.
+        .onChange(of: enabled) { claimFocus() }
+        .onChange(of: yieldsFocus) { claimFocus() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             clickReclaim.activated()
             claimFocus()

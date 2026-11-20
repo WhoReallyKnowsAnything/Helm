@@ -14,8 +14,43 @@ struct ActivationFocusTests {
         window.makeFirstResponder(nil)
         try await Task.sleep(for: .milliseconds(100))
         NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: window)
+        #expect(await waitFor { window.firstResponder is NSTextView })
+    }
+
+    private func waitFor(timeout: Duration = .seconds(2), _ what: () -> Bool) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+        while !what(), clock.now < deadline { try? await Task.sleep(for: .milliseconds(1)) }
+        return what()
+    }
+
+    private func box(enabled: Bool, yields: Bool) -> PromptBoxView {
+        PromptBoxView(text: .constant(""), entries: [], enabled: enabled, message: nil, onSend: {}, yieldsFocus: yields)
+    }
+
+    /// The hosting view's rootView is updated, not replaced: a new hosting view would fire onAppear and hide the bug.
+    private func settle(_ window: NSWindow, _ root: PromptBoxView) {
+        (window.contentView as? NSHostingView<PromptBoxView>)?.rootView = root
+    }
+
+    /// A box that appears disabled and is enabled later (the session's inbox appears) must take focus then.
+    @Test func aBoxThatBecomesEnabledTakesFocus() async throws {
+        _ = NSApplication.shared
+        let window = TestWindow.keyed(box(enabled: false, yields: false))
         try await Task.sleep(for: .milliseconds(300))
-        #expect(window.firstResponder is NSTextView)
+        #expect(!(window.firstResponder is NSTextView))
+        settle(window, box(enabled: true, yields: false))
+        #expect(await waitFor { window.firstResponder is NSTextView })
+    }
+
+    /// A card holds the keyboard while it shows: when it is answered, the box takes the focus back.
+    @Test func aBoxThatStopsYieldingTakesFocus() async throws {
+        _ = NSApplication.shared
+        let window = TestWindow.keyed(box(enabled: true, yields: true))
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(!(window.firstResponder is NSTextView))
+        settle(window, box(enabled: true, yields: false))
+        #expect(await waitFor { window.firstResponder is NSTextView })
     }
 
     @Test func theBoxTestWindowIsNeverVisibleToTheOwner() async throws {
