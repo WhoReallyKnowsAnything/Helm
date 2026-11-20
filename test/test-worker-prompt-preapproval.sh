@@ -44,6 +44,12 @@ else
     fail "section does not keep permission prompts / approval gates / git approvals / no self-approve"
 fi
 
+if printf '%s' "$SECTION" | grep -qF 'every `git commit` your task asks for'; then
+    pass "section pre-approves the commits the task asks for"
+else
+    fail "section does not pre-approve the commits the task asks for"
+fi
+
 if grep -qF 'CADENCE-REQUIRED' "$PROMPT"; then pass "CADENCE-REQUIRED literal present"; else fail "CADENCE-REQUIRED literal missing"; fi
 
 if tr '\n' '|' < "$PROMPT" | grep -qF 'DEPENDENCY-SATISFIED|From: auth-service-refactor|Artifact: session/auth-service-refactor|```'; then
