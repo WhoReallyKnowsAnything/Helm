@@ -19,6 +19,9 @@ struct DispatchBar: View {
     /// The Workflow button, shown on the tree screen only. Off by default.
     var showsWorkflow = false
     var onWorkflow: () -> Void = {}
+    /// Clear button, shown on a terminal screen only: ends the shell and starts a fresh one. Off by default.
+    var showsClear = false
+    var onClear: () -> Void = {}
     let onClose: () -> Void
     @Environment(\.kitAccent) private var accent
 
@@ -52,6 +55,11 @@ struct DispatchBar: View {
                 Button(action: onTerminal) { Text("Terminal") }
                     .buttonStyle(.kit)
                     .accessibilityLabel("Open terminal")
+            }
+            if showsClear {
+                Button(action: onClear) { Text("Clear") }
+                    .buttonStyle(.kit)
+                    .accessibilityLabel("Clear terminal")
             }
             if let sessionName {
                 Text(sessionName).kitType(.label).foregroundStyle(Ink.text).lineLimit(1)

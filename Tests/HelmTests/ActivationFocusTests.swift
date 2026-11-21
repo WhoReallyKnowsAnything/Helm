@@ -24,8 +24,34 @@ struct ActivationFocusTests {
         return what()
     }
 
-    private func box(enabled: Bool, yields: Bool) -> PromptBoxView {
-        PromptBoxView(text: .constant(""), entries: [], enabled: enabled, message: nil, onSend: {}, yieldsFocus: yields)
+    private func box(enabled: Bool, yields: Bool, shown: String = "") -> PromptBoxView {
+        PromptBoxView(text: .constant(""), entries: [], enabled: enabled, message: nil, onSend: {}, yieldsFocus: yields, shown: shown)
+    }
+
+    /// Selecting another project or node reuses the box with new content: onAppear does not fire, so the shown identity must claim.
+    @Test func switchingTheShownSessionTakesFocus() async throws {
+        _ = NSApplication.shared
+        let window = TestWindow.keyed(box(enabled: true, yields: false, shown: "project-a/node-1"))
+        try await Task.sleep(for: .milliseconds(300))
+        window.makeFirstResponder(nil)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(!(window.firstResponder is NSTextView))
+        settle(window, box(enabled: true, yields: false, shown: "project-a/node-2")) // node switch
+        #expect(await waitFor { window.firstResponder is NSTextView })
+        window.makeFirstResponder(nil)
+        try await Task.sleep(for: .milliseconds(100))
+        settle(window, box(enabled: true, yields: false, shown: "project-b/node-1")) // project switch
+        #expect(await waitFor { window.firstResponder is NSTextView })
+    }
+
+    /// A card that holds the keyboard keeps it across a switch.
+    @Test func switchingTheShownSessionKeepsACardsFocus() async throws {
+        _ = NSApplication.shared
+        let window = TestWindow.keyed(box(enabled: true, yields: true, shown: "a"))
+        try await Task.sleep(for: .milliseconds(300))
+        settle(window, box(enabled: true, yields: true, shown: "b"))
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(!(window.firstResponder is NSTextView))
     }
 
     /// The hosting view's rootView is updated, not replaced: a new hosting view would fire onAppear and hide the bug.

@@ -205,7 +205,7 @@ struct ConversationHost: View {
                     onEscape: interrupt,
                     terminalCommands: store.terminalSlashCommands,
                     onIntercept: { text in Task { await box.send(text, terminalCommands: store.terminalSlashCommands) } },
-                    yieldsFocus: !requests.entries(for: nodeKey).isEmpty,
+                    yieldsFocus: !requests.entries(for: nodeKey).isEmpty, shown: nodeKey + "|" + (inboxPath ?? ""),
                     attachments: box.attachments, onAttach: box.attach, onDetach: box.detach)
             }
             .onChange(of: ended, initial: true) { _, value in store.setEnded(value) }

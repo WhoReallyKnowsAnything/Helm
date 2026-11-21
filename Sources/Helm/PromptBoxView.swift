@@ -18,6 +18,8 @@ struct PromptBoxView: View {
     var onIntercept: (String) -> Void = { _ in }
     /// True while a question or permission card is shown: the card keeps the keyboard, the field does not claim it.
     var yieldsFocus: Bool = false
+    /// Identity of the session shown. A switch reuses this view, so a change of it claims focus like onAppear would.
+    var shown: String = ""
     /// Dropped files waiting for Send, shown as removable chips. Empty and no-op defaults: the host opts in.
     var attachments: [URL] = []
     var onAttach: ([URL]) -> Void = { _ in }
@@ -105,6 +107,7 @@ struct PromptBoxView: View {
         // The box can appear disabled, or under a card, and be free later: no other trigger fires then.
         .onChange(of: enabled) { claimFocus() }
         .onChange(of: yieldsFocus) { claimFocus() }
+        .onChange(of: shown) { claimFocus() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             clickReclaim.activated()
             claimFocus()

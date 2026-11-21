@@ -10,7 +10,7 @@ struct ShellRenderTests {
     /// `RenderSupport.render` forces dark), so no light snapshot exists (D-13). The start step is empty: no process forks.
     @Test func theShellPaneDrawsOnTheTerminalColour() throws {
         let size = CGSize(width: 600, height: 300)
-        let rep = try RenderSupport.write(ShellPane(folder: NSHomeDirectory(), start: { _ in }), .fixed(size), name: "shell-dark")
+        let rep = try RenderSupport.write(ShellPane(folder: NSHomeDirectory(), store: ShellStore(), start: { _ in }), .fixed(size), name: "shell-dark")
         #expect(CGFloat(rep.pixelsWide) >= size.width)
         #expect(CGFloat(rep.pixelsHigh) >= size.height)
         let pixel = try #require(rep.colorAt(x: rep.pixelsWide / 2, y: rep.pixelsHigh / 2)?.usingColorSpace(.sRGB))

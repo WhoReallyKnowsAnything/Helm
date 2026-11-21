@@ -144,7 +144,7 @@ case "$(json_field hook_event_name)" in
           const [script,label,ahead]=process.argv.slice(1);
           process.stdout.write(JSON.stringify({decision:"block",reason:ahead==="0"?
             "Your launch system prompt is the user\u0027s go for this task, so do not wait for a \"go\". Start the task now. If you need an answer, send it to the orchestrator with SendMessage and stop.":
-            "Your branch has committed work and a clean tree, but the task is not marked done. If the task is finished, run: \""+script+"\" --mark-done "+label+". Then stop. If you are waiting on the user or the task is not finished, say so in one line and stop."}));
+            "Your branch has committed work and a clean tree, but the task is not marked done. If the task is finished, run: \""+script+"\" --mark-done "+label+". Then send the completion report to the orchestrator with SendMessage, and only then stop. If you are waiting on the user or the task is not finished, say so in one line and stop."}));
         ' "$SCRIPT_DIR/lib/dispatch-task.sh" "$AGENT" "$STOP_AHEAD" 2>/dev/null)" \
       && [[ -n "$BLOCK_JSON" ]]; then
       printf '%s' "$BLOCK_JSON"

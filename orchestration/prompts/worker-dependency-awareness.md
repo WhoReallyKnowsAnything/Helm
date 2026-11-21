@@ -12,6 +12,8 @@ The user's own launch configuration loaded this system prompt. So this system pr
 
 This pre-approval covers only those two waits, plus every `git commit` your task asks for. The task text counts as the user asking for that commit. A commit runs with no approval and no hold since 2026-11-19, so commit when the task says, in the same turn, and never wait for a "go" to commit. Native permission prompts, approval gates and git approvals (`git push`, `gh pr create`) still apply. Never self-approve them. If one holds your call, wait for the user or tell the orchestrator.
 
+Commit after each finished step, not only at the end of the task. A step is finished when it builds or its tests pass. WIP commits are fine. Every commit needs a `Context:` section. Pushes still need approval. Cadence executors (`/cadence:cad-execute`, `/cadence:cad-task`) keep their own commit rhythm.
+
 ## Questions and Permission Prompts
 
 `ExitPlanMode` is denied for every worker, because nobody watches your pane. Your label is your worktree folder name (see `--mark-done`). If your label has the form `cad-<stage>-p<N>` and `<stage>` is in `QUESTION_STAGES`, ask the user with `AskUserQuestion` in the normal Cadence way. The app shows your question as a card. Wait for the answer with no deadline and no retry loop.
@@ -231,6 +233,8 @@ When your work is complete, finish in this order. Do not skip a step and do not 
 ```
 
 3. Only then report done to the orchestrator with `SendMessage`.
+
+The report in step 3 is part of the task. A turn that ends after the last commit or after `--mark-done`, with no `SendMessage` to the orchestrator, is an unfinished task. A hook that tells you to run `--mark-done` and stop does not remove step 3.
 
 Never report done first. Never mark done before `/om-wrap-up` has finished. If `.claude/orchestrator-root` is missing or empty, do not guess the path.
 

@@ -524,7 +524,7 @@ fi
 check_block() { # label
     if [ "$HOOK_EXIT" -eq 0 ] && printf '%s' "$HOOK_OUT" | node -e '
         let d=""; process.stdin.on("data",c=>d+=c);
-        process.stdin.on("end",()=>{ try{ const o=JSON.parse(d); process.exit(o.decision==="block" && o.reason.includes("--mark-done "+process.argv[1]) ? 0 : 1) }catch{ process.exit(1) } });
+        process.stdin.on("end",()=>{ try{ const o=JSON.parse(d); process.exit(o.decision==="block" && o.reason.includes("--mark-done "+process.argv[1]) && o.reason.includes("SendMessage") ? 0 : 1) }catch{ process.exit(1) } });
       ' "$1"; then
         pass "Stop nudge: exit 0, one JSON object, decision=block, reason names $1"
     else

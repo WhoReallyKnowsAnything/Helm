@@ -132,5 +132,8 @@ printf '%s' "$VERIFY" | grep -qF 'UAT is complete or the user tells you to stop'
 printf '%s' "$VERIFY" | grep -qF '/cadence:cad-capture' && printf '%s' "$VERIFY" | grep -qF 'only as the skill argument' && pass "verify section runs capture with the reason only as the skill argument" || fail "verify section lacks the capture rule"
 printf '%s' "$VERIFY" | grep -qF 'then run the `--mark-done`' && pass "verify section marks done again after the capture commit" || fail "verify section lacks mark done after capture"
 
+FINISH=$(awk '/^## /{p=($0=="## Finishing the Task")} p' "$PROMPT")
+printf '%s' "$FINISH" | grep -qF 'is an unfinished task' && printf '%s' "$FINISH" | grep -qF 'with no `SendMessage` to the orchestrator' && pass "finish section requires the completion report after mark-done" || fail "finish section lacks the completion report rule"
+
 echo "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
 [ "$FAIL_COUNT" -eq 0 ]

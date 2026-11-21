@@ -21,6 +21,8 @@ struct ContentView: View {
     /// The selected project's task-list file (D-12), pointed at the same folder as `workers`.
     @StateObject private var tasks = TaskListStore()
     @State private var dispatchOpen = false
+    /// Bumped by Clear so the terminal pane rebuilds on the fresh shell.
+    @State private var shellEpoch = 0
     /// The Merge and Teardown sheets live here, never in the worker strip: the strip leaves the screen when
     /// `selectedWorker` is cleared, and a sheet inside it would be dismissed in the middle of a run.
     @State private var mergeModel: MergeModel?
@@ -49,7 +51,10 @@ struct ContentView: View {
     @State private var nav = NavigationState.none
     /// The per-project Close flow: a confirm alert, then `ProjectTeardown`, then the row leaves the sidebar.
     @StateObject private var closer = CloseModel(
-        teardown: { id, folder in try await ProjectTeardown.stopOffMain(folder: folder, sessionId: id) },
+        teardown: { id, folder in
+            try await ProjectTeardown.stopOffMain(folder: folder, sessionId: id)
+            await ShellStore.shared.close(folder)
+        },
         forget: { OpenProjects.shared.remove($0) })
     /// Projects that were open, kept in a file so a restart or tmux stop leaves them in the sidebar (D-01).
     @ObservedObject private var openProjects = OpenProjects.shared
@@ -476,8 +481,9 @@ struct ContentView: View {
     @ViewBuilder private var main: some View {
         if case .shell(let folder, _) = nav.screen, nav.showsHomeShell {
             VStack(spacing: Space.none) {
-                DispatchBar(showsBack: true, showsActions: false, onBack: { nav = nav.goingBack() }, onClose: {})
-                ShellPane(folder: folder).id("shell-\(folder)").frame(maxWidth: .infinity, maxHeight: .infinity)
+                DispatchBar(showsBack: true, showsActions: false, onBack: { nav = nav.goingBack() },
+                            showsClear: true, onClear: { ShellStore.shared.close(folder); shellEpoch += 1 }, onClose: {})
+                ShellPane(folder: folder).id("shell-\(folder)-\(shellEpoch)").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         } else if let id = selection {
             VStack(spacing: Space.none) {
@@ -577,7 +583,7 @@ struct ContentView: View {
                     if projectFolder == nil {
                         KitNotice(text: "This project has no folder, so no terminal opens.").padding(Space.xxxl)
                     } else {
-                        ShellPane(folder: folder).id("shell-\(folder)").frame(maxWidth: .infinity, maxHeight: .infinity)
+                        ShellPane(folder: folder).id("shell-\(folder)-\(shellEpoch)").frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
                 if nav.showsDispatchBar(hasFolder: projectFolder != nil) {
@@ -612,6 +618,8 @@ struct ContentView: View {
                 let rows = workflow.board?.rows ?? []
                 nav = nav.openingWorkflow(phase: WorkflowTabs.defaultPhase(status: workflow.board?.status, rows: rows) ?? "", tab: "board")
             },
+            showsClear: { if case .shell = nav.screen { true } else { false } }(),
+            onClear: { if let folder = projectFolder { ShellStore.shared.close(folder); shellEpoch += 1 } },
             onClose: { if let id = selection, let row = store.rows.first(where: { $0.id == id }) { closer.ask(row, in: store.snapshot) } })
     }
 
