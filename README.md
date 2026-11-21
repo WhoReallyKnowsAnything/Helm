@@ -12,9 +12,9 @@ and voice credits are in [`docs/media/CREDITS.md`](docs/media/CREDITS.md).*
 Helm is a Mac app for developers who run Claude Code on many
 projects and many tasks at the same time. Each project gets an orchestrator
 session. Each task gets its own worker session in its own git worktree. The
-app shows all of them in one window, lets you talk to any of them, and puts
-every decision that needs a human (a git commit, a tool call, a question) in
-front of you as a card you can approve, deny or answer.
+app shows all of them in one window and lets you talk to any of them. Every
+decision that needs a human (a tool call, a question, a `git push`) reaches
+you as a card. You approve, deny or answer it.
 
 Claude sessions never run in a terminal window. The one exception is a plain
 zsh shell for your own commands. Every session is still the real
@@ -48,9 +48,10 @@ keep working exactly as they do in a terminal.
 
 Running several Claude Code sessions in parallel works, but it is hard to
 follow. Sessions live in terminal tabs. A worker that waits for a permission
-answer stops silently in a tab you are not looking at. Merging a worker's
-branch, cleaning up its worktree and keeping track of which task it was doing
-are all manual steps.
+answer stops silently in a tab you are not looking at. You must also merge
+each worker's branch, remove its worktree and remember which task it was
+doing. All of these steps are manual, and they get worse with each session
+you add.
 
 Helm replaces that terminal flow with one window:
 
@@ -59,7 +60,7 @@ Helm replaces that terminal flow with one window:
 - **Work in any session.** A native conversation view for every session, with
   no terminal for Claude sessions (a plain zsh shell for your own commands
   is the one exception).
-- **Decide in one place.** Permission prompts, git commits and questions from
+- **Decide in one place.** Permission prompts, questions and git pushes from
   any worker arrive as cards in the app.
 - **Run a real workflow.** A board and stage screens for
   [Cadence](https://github.com/crenshawdev/cadence) (context, plan, execute,
@@ -130,6 +131,8 @@ the same way if you use them. Helm does not need them.
 
 - A native chat view for every session: your messages, Claude's replies, tool
   calls, diffs, images and sub-agents.
+- The message box takes focus when you switch project or node, so you can
+  type at once.
 - Send messages, drop in files, stop a running turn, and use the commands that
   normally need a terminal screen (`/model`, `/effort`, `/compact`, `/mcp`,
   `/login`, `/status`) natively.
@@ -141,7 +144,7 @@ the same way if you use them. Helm does not need them.
   Allow works at once.
 - **Hold cards.** Every `git push` and `gh pr create` that a
   worker runs is held by the git approval gate until you press Approve or
-  Deny. The card shows on the worker's tree node and at the top of every
+  Deny. Commits are not held. They run with no approval. The card shows on the worker's tree node and at the top of every
   session view in that project.
 - **Question cards.** A worker's `AskUserQuestion` shows its options as a card.
   Decline needs a second click, and every deny the app writes is logged with
@@ -153,6 +156,8 @@ the same way if you use them. Helm does not need them.
 
 - The orchestrator's open Notion tasks show in the app. Pick one, and the
   orchestrator drafts the task, starts a worker and hands it the task.
+- A worker commits after each finished step. When its task is done, it sends
+  a completion report to the orchestrator.
 - When a worker finishes, the orchestrator offers a merge review. The merge
   checks for conflicts, merges the branch and removes the worktree.
 - The app shows each worker's pull request, its checks and the changed files.
@@ -171,8 +176,12 @@ the same way if you use them. Helm does not need them.
   project, or in your home folder with the terminal button at the bottom of
   the sidebar, beside the usage lines.
 - The shell starts as a login shell (`zsh -l`), with colours, resize and
-  scrollback. Leaving the screen, closing the project or quitting the app
-  stops the shell, so no stray zsh keeps running.
+  scrollback.
+- Each terminal (Home and each project) stays alive when you switch away. Its
+  history is still there when you return. Helm keeps one shell for each folder.
+- The **Clear** button stops the shell and starts a fresh one in the same
+  folder. Closing the project or quitting the app also stops the shell. A
+  shell that exited is replaced the next time you show the terminal.
 - Only your shell runs here. Claude sessions always stay in the native
   conversation view.
 
@@ -210,9 +219,9 @@ The app follows Cadence 4.3's layout, where run records live under
 The app is built so that no session can approve its own risky actions:
 
 - **Git operations need a person.** The orchestrator's git approval gate holds
-  every push and pull request creation from a worker until you press Approve or Deny in the
-  app. A hold that nobody answers is denied after 600 seconds; it never falls
-  back to "allow".
+  every `git push` and `gh pr create` from a worker until you press Approve or
+  Deny in the app. Commits are not held. A hold that nobody answers is denied
+  after 600 seconds. It never falls back to "allow".
 - **No back door.** The app has no HTTP endpoint, socket, URL scheme or
   AppleScript command that can approve a hold. A worker could call such a thing
   and approve itself, so it does not exist.
@@ -332,7 +341,7 @@ quit dialog, leave a project unchecked to keep its sessions running in tmux.
 swift test
 ```
 
-The suite has about 1,670 tests. It includes render tests that draw each
+The suite has more than 1,600 tests. It includes render tests that draw each
 screen in light and dark appearance to the git-ignored `screenshots/` folder,
 so you can look at every state without running the app. Two scripts check the
 design rules:
@@ -395,8 +404,8 @@ does not include it.
 
 ## Limits and non-goals
 
-- **Build it yourself.** Anyone may build and install Helm. It is not
-  notarized, and no prebuilt app is distributed. `scripts/bundle-app.sh` signs
+- **Not notarized.** Anyone may build Helm or download a release. The app is
+  not notarized. `scripts/bundle-app.sh` signs
   with an Apple Development identity when your keychain has one, and signs ad
   hoc when it does not. An app built on your own Mac has no download
   quarantine flag, so Gatekeeper is not expected to stop it (unverified). If
