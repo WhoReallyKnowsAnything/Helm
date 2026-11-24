@@ -23,6 +23,8 @@ struct WorkflowBoardView: View {
     @State private var overriding = false
     @State private var reason = ""
     @State private var collapsed = false
+    @State private var showDetails = false
+    @State private var showConfig = false
 
     var body: some View {
         if let failure {
@@ -32,16 +34,17 @@ struct WorkflowBoardView: View {
                 KitStageActionRow(primaryTitle: panel?.next.map { "Next: \($0.stage.rawValue.capitalized)" } ?? "Next",
                                   primaryReason: primaryReason, menuTitle: menuChips.isEmpty ? nil : "Suggested",
                                   onPrimary: onPress, secondary: { secondary(board) }, menu: { chipItems(menuChips) })
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Space.sm) {
-                        Text("\(board.milestone)  \(WorkflowBoardRows.progress(board))").kitType(.meta).foregroundStyle(Ink.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let health = board.health { healthStrip(health) }
-                        if !collapsed { details(board) }
+                VStack(alignment: .leading, spacing: Space.sm) {
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        Text(board.milestone).kitType(.title).foregroundStyle(Ink.text)
+                        Text(WorkflowBoardRows.progress(board)).kitType(.body).foregroundStyle(Ink.textSecondary)
                     }
-                    .padding(.horizontal, Space.md)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    if let health = board.health { healthStrip(health) }
+                    if !collapsed { details(board) }
                 }
+                .padding(.horizontal, Space.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -92,24 +95,24 @@ struct WorkflowBoardView: View {
                 }
             }
             if let held, !overlays.values.contains(where: { $0.label == held && $0.state == .dead }) { clearButton(held) }
-            if let next = board.next { Text(nextLine(next, hint: board.status?.cursorNext)).kitType(.meta).foregroundStyle(Ink.textSecondary) }
-            if let target = panel?.next {
-                Text(target.routingText).kitType(.meta).foregroundStyle(Ink.textSecondary)
+            if let message { Text(message).kitType(.body).foregroundStyle(Ink.textSecondary) }
+            DisclosureGroup(isExpanded: $showDetails) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    if let target = panel?.next { Text(target.routingText) }
+                    if let config = board.config { Text("plan check: \(config.planCheck ? "on" : "off")") }
+                    if let ahead = board.skipAhead { Text(aheadLine(ahead)) }
+                    ForEach(panel?.roles ?? [], id: \.name) { role in Text("\(role.name): \(role.text)") }
+                    if let why = panel?.chipsOff, !board.chips.isEmpty { Text(why) }
+                    if let reason = board.suggestReason { Text("suggest: \(reason)") }
+                }
+                .kitType(.meta).foregroundStyle(Ink.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, Space.xs)
+            } label: {
+                Text(board.next.map { nextLine($0, hint: board.status?.cursorNext) } ?? "Details")
+                    .kitType(.body).foregroundStyle(Ink.text)
             }
-            if let config = board.config {
-                Text("plan check: \(config.planCheck ? "on" : "off")").kitType(.meta).foregroundStyle(Ink.textSecondary)
-            }
-            if let ahead = board.skipAhead {
-                Text(aheadLine(ahead)).kitType(.meta).foregroundStyle(Ink.textSecondary)
-            }
-            ForEach(panel?.roles ?? [], id: \.name) { role in
-                Text("\(role.name): \(role.text)").kitType(.meta).foregroundStyle(Ink.textSecondary)
-            }
-            if let why = panel?.chipsOff, !board.chips.isEmpty { Text(why).kitType(.meta).foregroundStyle(Ink.textSecondary) }
-            if let reason = board.suggestReason {
-                Text("suggest: \(reason)").kitType(.meta).foregroundStyle(Ink.textSecondary)
-            }
-            if let message { Text(message).kitType(.meta).foregroundStyle(Ink.textSecondary) }
+            .kitAnimation(.reveal, value: showDetails)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -127,8 +130,9 @@ struct WorkflowBoardView: View {
 
     @ViewBuilder
     private func configCheck(_ check: Result<CadenceConfigCheck, CadenceLocator.Failure>) -> some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text("Cadence config").kitType(.meta).foregroundStyle(Ink.textSecondary)
+        let differing: Int? = { if case .success(let found) = check { return found.rows.filter(\.differs).count } else { return nil } }()
+        DisclosureGroup(isExpanded: $showConfig) {
+          VStack(alignment: .leading, spacing: Space.xs) {
             switch check {
             case .failure(let problem):
                 Text(problem.reason).kitType(.meta).foregroundStyle(Ink.textSecondary)
@@ -155,7 +159,13 @@ struct WorkflowBoardView: View {
                 }
                 ForEach(found.warnings, id: \.self) { Text($0).kitType(.meta).foregroundStyle(Ink.waiting) }
             }
+          }
+          .padding(.top, Space.xs)
+        } label: {
+            let text = differing.map { $0 == 0 ? "Config: all as recommended" : "Config: \($0) differ" } ?? "Config: unreadable"
+            Text(text).kitType(.body).foregroundStyle((differing ?? 1) > 0 ? Ink.waiting : Ink.text)
         }
+        .kitAnimation(.reveal, value: showConfig)
     }
 
     private func chipButton(_ chip: CadenceChip) -> some View {

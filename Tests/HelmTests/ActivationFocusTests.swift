@@ -205,6 +205,92 @@ struct ActivationFocusTests {
         #expect(claims == 0)
     }
 
+    // MARK: click anywhere in the chat
+
+    /// A window with a chat area and a reclaim wired to it. `interactive` stands in for the accessibility hit test.
+    private func chat(interactive: Bool = false) -> (reclaim: PromptBoxView.ClickReclaim, window: NSWindow, claims: () -> Int) {
+        _ = NSApplication.shared
+        let window = TestWindow.keyed(Color.clear)
+        let area = PromptBoxView.ChatArea()
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 200)) // the left 400 pt: the chat; the rest: the sidebar
+        window.contentView?.addSubview(view)
+        area.view = view
+        let reclaim = PromptBoxView.ClickReclaim()
+        reclaim.area = area
+        reclaim.isInteractive = { _, _ in interactive }
+        var claims = 0
+        reclaim.install { claims += 1 }
+        return (reclaim, window, { claims })
+    }
+
+    private func click(_ type: NSEvent.EventType, _ x: CGFloat, in window: NSWindow) {
+        let event = NSEvent.mouseEvent(with: type, location: NSPoint(x: x, y: 100), modifierFlags: [], timestamp: 0,
+                                       windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+        NSApp.sendEvent(event)
+    }
+
+    @Test func aPlainClickInTheChatClaimsFocus() async throws {
+        let (reclaim, window, claims) = chat()
+        defer { reclaim.remove() }
+        click(.leftMouseDown, 100, in: window)
+        click(.leftMouseUp, 100, in: window)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims() == 1)
+    }
+
+    @Test func aDragSelectionDoesNotClaimFocus() async throws {
+        let (reclaim, window, claims) = chat()
+        defer { reclaim.remove() }
+        click(.leftMouseDown, 100, in: window)
+        click(.leftMouseUp, 200, in: window)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims() == 0)
+    }
+
+    @Test func aClickOutsideTheChatDoesNotClaimFocus() async throws {
+        let (reclaim, window, claims) = chat()
+        defer { reclaim.remove() }
+        click(.leftMouseDown, 500, in: window)
+        click(.leftMouseUp, 500, in: window)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims() == 0)
+    }
+
+    @Test func aClickOnAControlDoesNotClaimFocus() async throws {
+        let (reclaim, window, claims) = chat(interactive: true)
+        defer { reclaim.remove() }
+        click(.leftMouseDown, 100, in: window)
+        click(.leftMouseUp, 100, in: window)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims() == 0)
+    }
+
+    @Test func buttonsLinksAndEditableTextAreControlsButStaticTextIsNot() {
+        for role in [NSAccessibility.Role.button, .link, .popUpButton, .menuButton, .textField, .checkBox, .radioButton] {
+            #expect(PromptBoxView.ClickReclaim.isControl(role: role))
+        }
+        #expect(!PromptBoxView.ClickReclaim.isControl(role: .staticText))
+        #expect(!PromptBoxView.ClickReclaim.isControl(role: .group))
+        #expect(!PromptBoxView.ClickReclaim.isControl(role: nil))
+    }
+
+    /// The claim closure carries the box's own rule: with a card showing or the box disabled, a click claims nothing.
+    @Test func theClickClaimIsGatedByTheBoxsRule() {
+        #expect(!PromptBoxView.mayClaim(enabled: true, yieldsFocus: true, window: nil))
+        #expect(!PromptBoxView.mayClaim(enabled: false, yieldsFocus: false, window: nil))
+    }
+
+    /// A second install must not add a second monitor: one click claims once.
+    @Test func installingTwiceStillClaimsOncePerClick() async throws {
+        let (reclaim, window, claims) = chat()
+        defer { reclaim.remove() }
+        reclaim.install { Issue.record("second install must be ignored") }
+        click(.leftMouseDown, 100, in: window)
+        click(.leftMouseUp, 100, in: window)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(claims() == 1)
+    }
+
     /// AppKit selects all text on focus, so the next key would replace a kept draft: the claim leaves the caret at the end.
     @Test func aClaimWithADraftPutsTheCaretAtTheEndWithoutSelection() async throws {
         _ = NSApplication.shared

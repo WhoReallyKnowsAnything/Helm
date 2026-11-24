@@ -128,14 +128,41 @@ The user names a task by title or keyword in plain chat — not a numbered-list 
 
 On exactly one match, call `API-patch-page` on that Task page setting `Status` to `In progress`, before any further confirmation dialogue. Same property gotchas `notion-pull`/`notion-push` document apply: title property is `Task Name` (not `Task`); `Status` is a `status`-type field (not `select`). After this Status change, refresh the task-list file per ### Task-List File.
 
+### Task Row Layout
+
+Every Helm task row (phase task and sub-task) uses this page body. The headings are exact, level 2, in this order. A heading with nothing to say keeps its place and holds the single word `None`.
+
+```
+## Description
+<required. What to do and why, in plain sentences.>
+
+## Acceptance criteria
+<required. Bullets. Each one can be checked as true or false.>
+
+## Files / area
+<optional. Paths, modules or systems the work touches. Bullets.>
+
+## Depends on
+<`None`, or `<session label>, needs: <artifact>`.>
+
+## Notes
+<optional. Gotchas, links, decisions already made. Free text.>
+```
+
+Rows made before this layout have free text under `## Description` or no headings. Do not migrate them. The mapping step below reads both shapes.
+
 ### Mapping to the Drafted Prompt Shape
 
 Map the picked task into the 11-field "Drafted Prompt Shape" defined above:
 
 - **Title** ← `Task Name`
-- **Goal** / **Known context** ← the task's description/rich-text content (note if none was supplied)
+- **Layout check** — the body uses the Task Row Layout when it has a `## Acceptance criteria` heading. Then read the headings as set out in the next 4 bullets. When that heading is absent, use the prose rule in the bullet after them.
+- **Goal** ← `## Description`, followed by `Done when:` and the `## Acceptance criteria` bullets
+- **Known context** ← `## Files / area` and `## Notes`. Skip a section that holds only `None`.
+- **Depends on** ← `## Depends on` when it holds a value other than `None`. A task from the layout may therefore start with a dependency. Copy the value as written. Otherwise the default below applies.
+- **Prose fallback (old rows)** — **Goal** / **Known context** ← the task's description/rich-text content (note if none was supplied)
 - **Project path**, **State-file pointer**, **Numbered approach**, **Worktree-isolation note**, **Coordination footer**, **Escalation channel** — fill in the same way as for a manually-drafted task
-- **Depends on** — defaults to `None` unless the user explicitly states a dependency during Notion-sourced pick-up (the Notion task's own description/rich-text content has no structured place for this, so it is never auto-populated from Notion data)
+- **Depends on** — for a row without the Task Row Layout, defaults to `None` unless the user explicitly states a dependency during Notion-sourced pick-up (old free-text bodies have no structured place for this, so it is never auto-populated from them)
 - **Model** — choose per the field 11 rubric from the task's scope; default `sonnet` when unclear
 - **Cadence detection** — after mapping Title/Goal/Known context above, scan those three fields' text for a case-insensitive match of `Phase\\s+\\d+` or `Wave\\s+\\d+` (`\\d+` = one or more digits). Any match makes this task Cadence-required. Take the first `Phase <N>` match (if any) and the first `Wave <N>` match (if any) found across the three fields — join them with ` / ` if both matched (e.g. `Phase 21 / Wave 2`), or use whichever alone matched. Carry that string forward to the marker injection at Dispatch and Delivery Step 7 below. This detection only ever runs during Notion-Sourced Task Pick-Up — manually-drafted tasks (the default drafting-mode behavior earlier in this file) are never scanned and never receive the marker.
 

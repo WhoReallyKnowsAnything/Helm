@@ -140,6 +140,7 @@ struct ConversationHost: View {
         @State private var controlMessage: String?
         @State private var mcpAsked = false
         @State private var showSubagents = false
+        @State private var chatArea = PromptBoxView.ChatArea()
         @ObservedObject var requests: RequestStore
         let canSend: Bool
         let ended: Bool
@@ -206,8 +207,9 @@ struct ConversationHost: View {
                     terminalCommands: store.terminalSlashCommands,
                     onIntercept: { text in Task { await box.send(text, terminalCommands: store.terminalSlashCommands) } },
                     yieldsFocus: !requests.entries(for: nodeKey).isEmpty, shown: nodeKey + "|" + (inboxPath ?? ""),
-                    attachments: box.attachments, onAttach: box.attach, onDetach: box.detach)
+                    attachments: box.attachments, onAttach: box.attach, onDetach: box.detach, chatArea: chatArea)
             }
+            .background(PromptBoxView.ChatAreaView(area: chatArea))
             .onChange(of: ended, initial: true) { _, value in store.setEnded(value) }
             .onChange(of: requests.control(for: nodeKey).interrupt) {
                 // D-14: once per interrupt, off the main actor, for this node's own inbox.

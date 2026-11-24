@@ -24,6 +24,8 @@ struct PromptBoxView: View {
     var attachments: [URL] = []
     var onAttach: ([URL]) -> Void = { _ in }
     var onDetach: (URL) -> Void = { _ in }
+    /// The chat's frame: a plain click inside it focuses the box. Nil: only the click that activates the app does.
+    var chatArea: ChatArea?
     @State private var dropTargeted = false
     @AppStorage(ConversationFont.familyKey) private var family = ConversationFont.defaultFamily
     @AppStorage(ConversationFont.sizeKey) private var size = ConversationFont.defaultSize
@@ -37,22 +39,67 @@ struct PromptBoxView: View {
 
     /// The click that activates the app is delivered after `didBecomeActive`, and its mouseDown moves focus to the view under the
     /// pointer. So for a short window after activation, the first mouse up claims focus again. Later clicks are left alone.
+    ///
+    /// With an `area` set, a plain click inside it also claims: no drag (a selection stays), not on a button, link or text input.
+    /// Cards and a disabled box are refused by the claim closure itself (`mayClaim`). Terminal nodes sit outside the area.
     @MainActor final class ClickReclaim {
         static let window: TimeInterval = 1
+        static let dragSlop: CGFloat = 4
         private var activatedAt: Date?
         private var monitor: Any?
+        private var downAt: NSPoint?
+        var area: ChatArea?
+        /// Whether the click landed on a control. Replaceable so a test needs no accessibility tree.
+        var isInteractive: (NSWindow, NSEvent) -> Bool = ClickReclaim.hitsControl
         func activated(at date: Date = Date()) { activatedAt = date }
         func install(_ claim: @escaping () -> Void) {
             guard monitor == nil else { return }
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
-                if let at = self?.activatedAt, Date().timeIntervalSince(at) < Self.window {
-                    self?.activatedAt = nil
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+                guard let self else { return event }
+                if event.type == .leftMouseDown { downAt = event.locationInWindow; return event }
+                let down = downAt
+                downAt = nil
+                if let at = activatedAt, Date().timeIntervalSince(at) < Self.window {
+                    activatedAt = nil
+                    DispatchQueue.main.async { claim() }
+                } else if isPlainClickInChat(event, down: down) {
                     DispatchQueue.main.async { claim() }
                 }
                 return event
             }
         }
         func remove() { monitor.map(NSEvent.removeMonitor); monitor = nil }
+
+        private func isPlainClickInChat(_ event: NSEvent, down: NSPoint?) -> Bool {
+            guard let view = area?.view, let window = view.window, event.window === window, let down,
+                  hypot(event.locationInWindow.x - down.x, event.locationInWindow.y - down.y) <= Self.dragSlop,
+                  view.bounds.contains(view.convert(event.locationInWindow, from: nil))
+            else { return false }
+            return !isInteractive(window, event)
+        }
+
+        /// shortcut: SwiftUI buttons have no NSView, so the accessibility hit test names the control; an unlabelled one reads as plain.
+        static func hitsControl(_ window: NSWindow, _ event: NSEvent) -> Bool {
+            guard let content = window.contentView else { return false }
+            let hit = content.accessibilityHitTest(window.convertPoint(toScreen: event.locationInWindow))
+            if let text = hit as? NSTextView { return text.isEditable }
+            return isControl(role: (hit as? NSAccessibilityProtocol)?.accessibilityRole())
+        }
+
+        static func isControl(role: NSAccessibility.Role?) -> Bool {
+            guard let role else { return false }
+            return [.button, .link, .popUpButton, .menuButton, .textField, .comboBox, .checkBox, .radioButton, .slider,
+                    .incrementor, .menuItem, .disclosureTriangle].contains(role)
+        }
+    }
+
+    /// The chat's frame in its window, for `ClickReclaim`: the host puts `ChatAreaView` behind the chat.
+    @MainActor final class ChatArea { weak var view: NSView? }
+
+    struct ChatAreaView: NSViewRepresentable {
+        let area: ChatArea
+        func makeNSView(context: Context) -> NSView { let view = NSView(); area.view = view; return view }
+        func updateNSView(_ nsView: NSView, context: Context) { area.view = nsView }
     }
 
     private var showsMenu: Bool { enabled && !entries.isEmpty && !dismissed }
@@ -102,7 +149,7 @@ struct PromptBoxView: View {
         .fixedSize(horizontal: false, vertical: true)
         .background(Ink.header)
         .overlay(alignment: .top) { Ink.border.frame(height: Metric.hairline) }
-        .onAppear { claimFocus(); clickReclaim.install { claimFocus() } }
+        .onAppear { clickReclaim.area = chatArea; claimFocus(); clickReclaim.install { claimFocus() } }
         .onDisappear { clickReclaim.remove() }
         // The box can appear disabled, or under a card, and be free later: no other trigger fires then.
         .onChange(of: enabled) { claimFocus() }

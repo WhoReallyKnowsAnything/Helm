@@ -26,27 +26,38 @@ struct KitBoardRow<Actions: View>: View {
     }
 
     var body: some View {
-        HStack(spacing: Space.sm) {
-            Text(cursor ? ">" : "").kitType(.meta).foregroundStyle(Ink.accent.text)
-                .frame(width: Space.md, alignment: .leading)
-            Text("\(number) \(name)").kitType(.label).foregroundStyle(Ink.text).lineLimit(1)
-            Text(stage).kitType(.meta).foregroundStyle(Ink.textSecondary).lineLimit(1)
-            if let status {
-                HStack(spacing: Space.xs) {
-                    KitStatusDot(status: status.status)
-                    Text(status.text).kitType(.meta).foregroundStyle(status.status.ink)
-                }
+        VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(spacing: Space.sm) {
+                Text(cursor ? ">" : "").kitType(.title).foregroundStyle(Ink.accent.text)
+                    .frame(width: Space.md, alignment: .leading)
+                Text("\(number) \(name)").kitType(.title).foregroundStyle(Ink.text).lineLimit(1)
+                Text(stage).kitType(.meta).foregroundStyle(Ink.textSecondary).lineLimit(1)
+                    .padding(.horizontal, Space.sm).padding(.vertical, Space.xs)
+                    .background(Ink.border.opacity(0.5), in: Capsule())
+                Spacer(minLength: Space.sm)
+                actions
             }
-            if let holdText {
-                HStack(spacing: Space.xs) {
-                    Circle().fill(Ink.waiting).frame(width: Metric.statusDot, height: Metric.statusDot).accessibilityHidden(true)
-                    Text(holdText).kitType(.meta).foregroundStyle(Ink.waiting)
+            if status != nil || holdText != nil {
+                HStack(spacing: Space.md) {
+                    if let status {
+                        HStack(spacing: Space.xs) {
+                            KitStatusDot(status: status.status)
+                            Text(status.text).kitType(.meta).foregroundStyle(status.status.ink).lineLimit(1)
+                        }
+                    }
+                    if let holdText {
+                        HStack(spacing: Space.xs) {
+                            Circle().fill(Ink.waiting).frame(width: Metric.statusDot, height: Metric.statusDot).accessibilityHidden(true)
+                            Text(holdText).kitType(.meta).foregroundStyle(Ink.waiting).lineLimit(1)
+                        }
+                    }
                 }
+                .padding(.leading, Space.md + Space.sm)
             }
-            Spacer(minLength: Space.sm)
-            actions
         }
+        .padding(.vertical, Space.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottom) { Rectangle().fill(Ink.border).frame(height: Metric.hairline) }
         .accessibilityElement(children: .contain)
     }
 }
