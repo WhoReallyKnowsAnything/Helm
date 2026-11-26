@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import Testing
 @testable import Helm
@@ -93,6 +94,16 @@ private final class Calls: @unchecked Sendable {
         await store.refresh()
         #expect(store.snapshot == first)
         #expect(store.tick == 2)
+    }
+
+    @Test func unchangedOutputDoesNotRepublishTheSnapshot() async {
+        let store = SessionStore { .listed(sessions: "foo\t\n", windows: "foo\tdashboard\t/p\t%1\n") }
+        var emissions = 0
+        let subscription = store.$snapshot.dropFirst().sink { _ in emissions += 1 }
+        for _ in 0..<3 { await store.refresh() }
+        subscription.cancel()
+        #expect(emissions == 1)
+        #expect(store.tick == 3)
     }
 
     @Test func noServerEmptiesRowsWithoutFailure() async {

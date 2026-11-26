@@ -75,6 +75,14 @@ plutil -lint "$PLIST" >/dev/null
 launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true # "not loaded" is fine
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
+# Prompt-cache ping: every 50 min, one short turn per (live project, model).
+PING_PLIST_NAME="io.github.whoreallyknowsanything.helm.cache-ping.plist"
+PING_PLIST="$AGENTS_DIR/$PING_PLIST_NAME"
+render "$ORCH_DIR/launchd/$PING_PLIST_NAME" "$PING_PLIST" 644 "$(xml_esc "$ORCH_DIR")" "$(xml_esc "$HOME")"
+plutil -lint "$PING_PLIST" >/dev/null
+launchctl bootout "gui/$(id -u)" "$PING_PLIST" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$PING_PLIST"
+
 # --- hooks in ~/.claude/settings.json ---
 command -v node >/dev/null || { echo "install.sh: node is required to edit settings.json but was not found on PATH" >&2; exit 1; }
 node - "$HOME/.claude/settings.json" "$ORCH_DIR" "$HOOKS_DIR" <<'JS'

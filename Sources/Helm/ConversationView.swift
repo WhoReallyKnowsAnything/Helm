@@ -154,7 +154,7 @@ struct ConversationHost: View {
             self.inboxPath = inboxPath
             self.nodeKey = nodeKey
             self.requests = requests
-            _store = StateObject(wrappedValue: ConversationStore(path: path))
+            _store = StateObject(wrappedValue: requests.conversationStore(for: path))
             _box = StateObject(wrappedValue: requests.box(for: nodeKey, inboxPath: inboxPath))
             canSend = inboxPath != nil && !ended
             self.ended = ended

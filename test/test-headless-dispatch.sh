@@ -38,6 +38,8 @@ DB="$TMP_MAIN/.claude/session-state.db"
 BASE="$(basename "$TMP_MAIN" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
 
 export ORCH_PROJECT_ROOT="$TMP_MAIN"
+# The ready wait is covered by test-dispatch-ready-wait.sh; stubs never write a log.
+export DISPATCH_READY_TIMEOUT="${DISPATCH_READY_TIMEOUT:-0}"
 
 # Stubs. tmux logs every call to $STUB_TMUX_LOG and keeps the last argument of
 # new-window (the worker command) in $STUB_NW_FILE. STUB_TMUX_FAIL makes

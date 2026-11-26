@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Follows one out log and publishes the folded conversation (D-01, D-06). Reads from byte 0 on creation,
 /// then again on every file-change event in the log's folder. Modelled on `WorkerStore`.
@@ -41,6 +42,8 @@ final class ConversationStore: ObservableObject {
 
         /// The folded state after one read, or nil when nothing changed.
         func poll() -> (parser: ConversationParser, reset: Bool)? {
+            let interval = Perf.signposter.beginInterval("read")
+            defer { Perf.signposter.endInterval("read", interval) }
             let read = reader.read()
             if read.reset { parser = ConversationParser() }
             guard read.reset || !read.lines.isEmpty else { return nil }
@@ -51,13 +54,15 @@ final class ConversationStore: ObservableObject {
 
     private let source: Source
     private let queue = DispatchQueue(label: "ConversationStore.read")
-    private let path: String
+    let path: String
     private var watcher: ProjectWatcher?
     private var logSource: DispatchSourceFileSystemObject?
     private var reading = false
     private var readAgain = false
+    private var openState: OSSignpostIntervalState?
 
     init(path: String) {
+        openState = Perf.signposter.beginInterval("session open")
         self.path = path
         source = Source(path: path)
         let folder = (path as NSString).deletingLastPathComponent
@@ -124,6 +129,14 @@ final class ConversationStore: ObservableObject {
     }
 
     private func finish(_ result: (parser: ConversationParser, reset: Bool)?) {
+        defer {
+            if result != nil, let state = openState {
+                Perf.signposter.endInterval("session open", state)
+                openState = nil
+            }
+        }
+        let interval = Perf.signposter.beginInterval("finish")
+        defer { Perf.signposter.endInterval("finish", interval) }
         reading = false
         if let result {
             let folded = result.parser

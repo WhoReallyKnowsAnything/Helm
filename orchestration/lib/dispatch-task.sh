@@ -48,9 +48,29 @@ _build_launch_cmd() {
     if [[ -n "$orch_name" ]]; then
         orch_flag=" --append-system-prompt $(_sq_quote "Your orchestrator session name in the peer roster is: $orch_name. Use exactly this name as the SendMessage target for the orchestrator. Never use the bare name dashboard.")"
     fi
+    # Rules in the system prompt, not in message 0 (worker-rules.sh): the window shell
+    # reads the file at start, so the tmux command stays short. Only one inline
+    # --append-system-prompt is honoured, so the orchestrator-name line goes in the
+    # same file. On any failure the worker launches the old way.
+    local rules_file="" rules_root env_rules=""
+    source "$script_dir/orchestration/lib/worker-rules.sh" 2>/dev/null || true
+    # PROJECT_ROOT first: at dispatch the worktree does not exist yet, so a git lookup
+    # from session_dir fails (that silently dropped every fresh worker to the old launch).
+    rules_root="${PROJECT_ROOT:-}"
+    if [[ -z "$rules_root" ]]; then
+        rules_root="$(git -C "$session_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" \
+            && rules_root="$(cd "$rules_root/.." && pwd)" || rules_root=""
+    fi
+    if [[ -n "$rules_root" ]] && declare -F worker_rules_file >/dev/null \
+        && rules_file="$(worker_rules_file "$rules_root" "$orch_name" 2>/dev/null)"; then
+        orch_flag=" --append-system-prompt \"\$(cat $(_sq_quote "$rules_file"))\""
+        env_rules=" CLAUDE_CODE_DISABLE_CLAUDE_MDS=1"
+    else
+        echo "dispatch-task.sh: worker rules file not built for '$label'; launching without the rules-in-system-prompt setup" >&2
+    fi
     # env -u TMUX: see launch-claude.sh -- Claude Code drops to 256-colour with TMUX set
     local claude_cmd pipeline
-    claude_cmd="env -u TMUX CLAUDE_IN_TMUX=1 claude -p --input-format stream-json --output-format stream-json --verbose --include-partial-messages --replay-user-messages --model $(_sq_quote "$model")${effort_flag} --permission-mode auto --permission-prompt-tool stdio --name $(_sq_quote "$label") --append-system-prompt-file $(_sq_quote "$script_dir/orchestration/prompts/worker-dependency-awareness.md")${orch_flag}${resume_flag}"
+    claude_cmd="env -u TMUX CLAUDE_IN_TMUX=1${env_rules} claude -p --input-format stream-json --output-format stream-json --verbose --include-partial-messages --replay-user-messages --model $(_sq_quote "$model")${effort_flag} --permission-mode auto --permission-prompt-tool stdio --name $(_sq_quote "$label") --append-system-prompt-file $(_sq_quote "$script_dir/orchestration/prompts/worker-dependency-awareness.md")${orch_flag}${resume_flag}"
     pipeline="$(tmux_headless_cmd "$inbox" "$out" "$claude_cmd")" || return 1
     printf '%s' "cd $(_sq_quote "$session_dir") && command -v lean-ctx &>/dev/null && lean-ctx session task $(_sq_quote "$label"); claude update >/dev/null 2>&1 || true; ${pipeline}"
 }
@@ -292,6 +312,87 @@ if [[ "${1:-}" == "--status-board" ]]; then
         printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1e' "$_sb_label" "$_sb_title" "$_sb_status" "$_sb_event" "$_sb_time" "$_sb_message" "$_sb_n" "$_sb_old_op" "$_sb_pending"
     done <<< "$_sb_rows"
     exit 0
+fi
+# --cache-ping MODEL [EFFORT]: one short headless turn that sends the exact tools and
+# system prompt a worker of MODEL in this project sends, so the 1 h prompt cache stays
+# warm (docs/orchestrator/prompt-cache-report-2026-11-24.md section 7). The command comes
+# from _build_launch_cmd; two flags are added on top and nothing else is copied:
+# --no-session-persistence (no transcript) and --settings disableAllHooks (no Terminus
+# archive, no relay hooks). Runs in a fresh temp dir: no worktree, branch, state row or
+# tmux window. The single prompt is the first message, so nothing asks the orchestrator.
+# Appends one TSV line to ~/.claude/logs/cache-ping.log: time, project, model, input,
+# cache read, cache create, create 1h, create 5m, output, cost in USD (turn-1 usage).
+# Needs ORCH_PROJECT_ROOT or a cwd inside the project, like the other modes.
+if [[ "${1:-}" == "--cache-ping" ]]; then
+    _cp_model="${2:?--cache-ping needs a model}"
+    _cp_effort="${3:-}"
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    PROJECT_ROOT="$(_resolve_project_root)" || exit 1
+    source "$SCRIPT_DIR/orchestration/lib/tmux-session.sh" 2>/dev/null || true
+    _cp_tmp="$(mktemp -d "${TMPDIR:-/tmp}/cache-ping.XXXXXX")"
+    trap 'rm -rf "$_cp_tmp"' EXIT
+    printf '%s\n' '{"type":"user","message":{"role":"user","content":"Reply with the single word ok."}}' > "$_cp_tmp/in.jsonl"
+    : > "$_cp_tmp/out.jsonl"
+    # cwd is the project root, not the temp dir: a worker sees the project's agents,
+    # skills and settings in its tools and system blocks, so a ping from a bare temp dir
+    # warms a shorter prefix (measured 47.6k against 56k tokens).
+    _cp_cmd="$(_build_launch_cmd cache-ping "$PROJECT_ROOT" "$_cp_model" "$_cp_effort" "$_cp_tmp/in.jsonl" "$_cp_tmp/out.jsonl" "" "$(orch_session_name "$PROJECT_ROOT")")" || exit 1
+    _cp_flags=" claude -p --no-session-persistence --settings '{\"disableAllHooks\":true}' "
+    _cp_cmd="${_cp_cmd/ claude -p /$_cp_flags}"
+    # no lean-ctx task named cache-ping in the project's own lean-ctx session
+    _cp_cmd="${_cp_cmd/lean-ctx session task \'cache-ping\'/true}"
+    # setsid gives the pipeline its own process group: its trailing `kill 0` must not reach this script
+    # CLAUDE.md files sit in message 0, after the cached tools and system blocks: leaving them out
+    # cuts the 5-minute tail the ping writes each time, and the 1 h part it must read is unchanged
+    CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 perl -MPOSIX -e 'POSIX::setsid(); exec "bash", "-c", $ARGV[0]' "$_cp_cmd" >/dev/null 2>&1 &
+    _cp_pid=$!
+    for _cp_i in $(seq 1 240); do
+        grep -q '"type":"result"' "$_cp_tmp/out.jsonl" 2>/dev/null && break
+        sleep 0.5
+    done
+    kill -TERM -- "-$_cp_pid" 2>/dev/null || true
+    sleep 1
+    kill -KILL -- "-$_cp_pid" 2>/dev/null || true
+    mkdir -p "$HOME/.claude/logs"
+    _cp_row="$(grep -m1 '"type":"assistant"' "$_cp_tmp/out.jsonl" | jq -r '.message.usage | [.input_tokens, .cache_read_input_tokens, .cache_creation_input_tokens, (.cache_creation.ephemeral_1h_input_tokens // "-"), (.cache_creation.ephemeral_5m_input_tokens // "-"), .output_tokens] | @tsv' 2>/dev/null)" || _cp_row=""
+    _cp_cost="$(grep -m1 '"type":"result"' "$_cp_tmp/out.jsonl" | jq -r '.total_cost_usd // "-"' 2>/dev/null)" || _cp_cost="-"
+    _cp_row="$_cp_row	${_cp_cost:--}"
+    IFS=$'\t' read -r _ _cp_rd _cp_cr _ <<< "$_cp_row"
+    # an API error (spend limit) still yields a usage row, all zeros: count it as a failure
+    if [[ -z "${_cp_row%%	*}" || "${_cp_rd:-0}${_cp_cr:-0}" == "00" ]]; then
+        echo "dispatch-task.sh: cache ping got no reply for $_cp_model" >&2
+        printf '%s\t%s\t%s\tFAILED\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(basename "$PROJECT_ROOT")" "$_cp_model" >> "$HOME/.claude/logs/cache-ping.log"
+        exit 1
+    fi
+    printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(basename "$PROJECT_ROOT")" "$_cp_model" "$_cp_row" >> "$HOME/.claude/logs/cache-ping.log"
+    echo "$_cp_row"
+    exit 0
+fi
+# --cache-ping-all: ping every (live project, model). A live project is a tmux session
+# with a window named dashboard whose pane sits in a Helm project. The off switch is the
+# file ~/.claude/cache-ping.off. HELM_CACHE_PING_MODELS overrides the model list.
+if [[ "${1:-}" == "--cache-ping-all" ]]; then
+    if [[ -e "$HOME/.claude/cache-ping.off" ]]; then
+        echo "cache ping is off ($HOME/.claude/cache-ping.off exists)"
+        exit 0
+    fi
+    _cpa_rc=0
+    _cpa_roots=""
+    _cpa_panes="$(command tmux ${ORCH_TMUX_SOCKET:+-L "$ORCH_TMUX_SOCKET"} list-panes -a -F '#{window_name}|#{pane_current_path}' 2>/dev/null)" || _cpa_panes=""
+    # "|" not a tab: tmux prints a tab as "_" when it has no terminal (under launchd)
+    while IFS= read -r _cpa_line; do
+        _cpa_win="${_cpa_line%%|*}" _cpa_path="${_cpa_line#*|}"
+        [[ "$_cpa_win" == dashboard && -n "$_cpa_path" ]] || continue
+        _cpa_root="$(cd "$_cpa_path" 2>/dev/null && cd "$(command git rev-parse --git-common-dir 2>/dev/null)/.." 2>/dev/null && pwd)" || continue
+        [[ -f "$_cpa_root/.claude/session-state.db" ]] && _cpa_roots+="$_cpa_root"$'\n'
+    done <<< "$_cpa_panes"
+    while IFS= read -r _cpa_root; do
+        [[ -n "$_cpa_root" ]] || continue
+        for _cpa_m in ${HELM_CACHE_PING_MODELS:-sonnet[1m] opus haiku}; do
+            ORCH_PROJECT_ROOT="$_cpa_root" bash "${BASH_SOURCE[0]}" --cache-ping "$_cpa_m" || _cpa_rc=$?
+        done
+    done < <(printf '%s' "$_cpa_roots" | sort -u)
+    exit "$_cpa_rc"
 fi
 if [[ "${1:-}" == "--blocked-sweep-all" ]]; then
     # No shared active-project pointer and launchd has no project: sweep every
@@ -943,5 +1044,17 @@ if [[ "$TMUX_HELPER_ENABLED" != "true" ]] || ! tmux_ensure_window "$BASE_SESSION
 fi
 # The window exists: nothing after this point is undone by a signal.
 trap - INT TERM HUP
+
+# A peer message that reaches a worker before its SessionStart hooks finish is
+# held (peer_message_hold, cause mode-unknown). Wait until every started hook
+# has answered so the first SendMessage is not held. Bounded; on timeout, go on
+# as before (the orchestrator prompt's Blocked Workers rule is the guard).
+_ready_deadline=$((SECONDS + ${DISPATCH_READY_TIMEOUT:-30}))
+while (( SECONDS < _ready_deadline )); do
+    _hs="$(grep -c '"subtype":"hook_started"' "$_sf_out" 2>/dev/null || true)"
+    _hr="$(grep -c '"subtype":"hook_response"' "$_sf_out" 2>/dev/null || true)"
+    [[ "${_hs:-0}" -gt 0 && "${_hs:-0}" == "${_hr:-0}" ]] && break
+    sleep 0.2
+done
 
 exit 0

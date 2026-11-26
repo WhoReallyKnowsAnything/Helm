@@ -26,8 +26,7 @@ struct ControlRequests {
 
     mutating func feed(_ line: String) {
         // Cheap screen first: most lines are stream deltas.
-        guard ["control_request", "control_cancel_request", "control_response", "tool_result", "\"result\"", "\"init\""]
-            .contains(where: { line.contains($0) }),
+        guard line.utf8Contains(anyOf: ["control_request", "control_cancel_request", "control_response", "tool_result", "\"result\"", "\"init\""]),
             let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else { return }
         switch object["type"] as? String {
         case "control_request": open(line, object)

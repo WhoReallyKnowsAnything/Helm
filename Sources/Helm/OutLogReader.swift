@@ -29,9 +29,21 @@ final class OutLogReader {
         guard size > offset, (try? handle.seek(toOffset: offset)) != nil,
               let data = try? handle.read(upToCount: Int(size - offset)), !data.isEmpty else { return result }
         offset += UInt64(data.count)
-        var pieces = (partial + data).split(separator: 0x0A, omittingEmptySubsequences: false)
-        partial = Data(pieces.removeLast())
-        result.lines = pieces.filter { !$0.isEmpty }.map { String(decoding: $0, as: UTF8.self) }
+        var buffer = partial
+        buffer.append(data)
+        result.lines = buffer.withUnsafeBytes { raw -> [String] in
+            let bytes = raw.bindMemory(to: UInt8.self)
+            guard let base = bytes.baseAddress else { return [] }
+            var lines: [String] = []
+            var start = 0
+            while start < bytes.count, let hit = memchr(base + start, 0x0A, bytes.count - start) {
+                let end = base.distance(to: hit.assumingMemoryBound(to: UInt8.self))
+                if end > start { lines.append(String(decoding: UnsafeBufferPointer(rebasing: bytes[start..<end]), as: UTF8.self)) }
+                start = end + 1
+            }
+            partial = Data(bytes[start...])
+            return lines
+        }
         return result
     }
 
@@ -41,5 +53,18 @@ final class OutLogReader {
         offset = 0
         partial = Data()
         return hadState
+    }
+}
+
+extension String {
+    /// True when the UTF-8 bytes hold any of `needles`. A byte search, far cheaper than Foundation's `contains` on long lines.
+    func utf8Contains(anyOf needles: [StaticString]) -> Bool {
+        var copy = self
+        return copy.withUTF8 { buffer in
+            guard let base = buffer.baseAddress else { return false }
+            return needles.contains { needle in
+                memmem(base, buffer.count, needle.utf8Start, needle.utf8CodeUnitCount) != nil
+            }
+        }
     }
 }

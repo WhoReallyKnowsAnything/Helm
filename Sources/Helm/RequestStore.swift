@@ -70,6 +70,23 @@ final class RequestStore: ObservableObject {
     /// One prompt box per session, kept here so a half-typed message and dropped files survive a switch of session. In memory only.
     private var boxes: [String: PromptBoxModel] = [:]
 
+    /// Most recent first. A store holds a whole chat, so only a few are kept; a click on a kept path does not re-read the log.
+    private var conversations: [ConversationStore] = []
+    static let keptConversations = 3
+
+    /// The conversation store for an out log, reused across node clicks.
+    func conversationStore(for path: String) -> ConversationStore {
+        if let at = conversations.firstIndex(where: { $0.path == path }) {
+            let kept = conversations.remove(at: at)
+            conversations.insert(kept, at: 0)
+            return kept
+        }
+        let store = ConversationStore(path: path)
+        conversations.insert(store, at: 0)
+        if conversations.count > Self.keptConversations { conversations.removeLast(conversations.count - Self.keptConversations) }
+        return store
+    }
+
     /// The session's prompt box, kept by its inbox path (the node key repeats across projects). With no inbox path the node key is used; an empty key gets a fresh box.
     func box(for nodeKey: String, inboxPath: String?) -> PromptBoxModel {
         let key = inboxPath ?? nodeKey

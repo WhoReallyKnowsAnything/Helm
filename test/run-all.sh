@@ -6,6 +6,8 @@
 set -u
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIMIT="${TEST_TIMEOUT:-120}"
+# Stubbed dispatches never write a worker log; do not wait for one.
+export DISPATCH_READY_TIMEOUT="${DISPATCH_READY_TIMEOUT:-0}"
 # Some tests need a git checkout as the working directory.
 cd "$DIR/.." || exit 2
 

@@ -111,6 +111,8 @@ final class SessionStore: ObservableObject {
         guard !refreshing else { return }
         refreshing = true
         defer { refreshing = false }
+        let interval = Perf.signposter.beginInterval("refresh")
+        defer { Perf.signposter.endInterval("refresh", interval) }
         let runner = self.runner
         // The parse and the rows (which call realpath) run off the main actor, with the runner.
         let (outcome, listed) = await Task.detached { () -> (TmuxOutcome, TmuxSnapshot) in
@@ -123,10 +125,10 @@ final class SessionStore: ObservableObject {
         }.value
         switch outcome {
         case .listed:
-            snapshot = listed
+            if snapshot != listed { snapshot = listed }
             failure = nil
         case .noServer:
-            snapshot = TmuxSnapshot()
+            if snapshot != TmuxSnapshot() { snapshot = TmuxSnapshot() }
             failure = nil
         case .failed(let text):
             failure = text

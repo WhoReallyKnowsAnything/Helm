@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: install.sh replaces @ORCH_DIR@ (the orchestration folder) and @HOME@ (the home folder), XML-escaped. -->
+<!-- Keeps the 1 h prompt cache of rarely used worker models warm. Off switch: touch ~/.claude/cache-ping.off -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.whoreallyknowsanything.helm.cache-ping</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>@ORCH_DIR@/lib/dispatch-task.sh</string>
+        <string>--cache-ping-all</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>@HOME@/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>@ORCH_DIR@</string>
+    <key>StartInterval</key>
+    <integer>3000</integer>
+    <key>StandardOutPath</key>
+    <string>@HOME@/.claude/logs/cache-ping-launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>@HOME@/.claude/logs/cache-ping-launchd.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

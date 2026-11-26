@@ -90,6 +90,7 @@ struct ContentView: View {
         .onChange(of: nav.canGoBack, initial: true) { BackMenu.shared.canGoBack = nav.canGoBack }
         .onChange(of: alerts.pendingFocus) { applyFocus() }
         .onChange(of: selection) {
+            markScreenSwitch()
             if focus?.projectId != selection { focus = nil }
         }
         // Not `snapshot.windows`: a worker that waits at a prompt leaves the window list unchanged, so only the tick reaches it.
@@ -100,7 +101,10 @@ struct ContentView: View {
         }
         // A worker that merged, died or hid sends its terminal back to the tree, so the area never shows a node that no longer draws.
         .onChange(of: selectedRow) { if selectedRow == nil, nav.workerLabel != nil { nav = nav.showingTree() } }
-        .onChange(of: selectedWorker) { syncPullRequest() }
+        .onChange(of: selectedWorker) {
+            markScreenSwitch()
+            syncPullRequest()
+        }
         .onChange(of: selectedRow) { syncUATGate() }
         // The worker turned finished while it stayed selected: look up again (D-15). A newly selected worker already has its own lookup.
         .onChange(of: finishedSelection) { old, new in
@@ -153,6 +157,12 @@ struct ContentView: View {
             label: label, title: row.taskTitle, folder: folder, base: base, willRun: { nav = nav.showingTree() },
             pullRequestCheck: { PullRequestLookup.find(folder: folder, label: label, worktree: worktree) },
             unknownPullRequestAllowed: unknownPullRequestAllowed, uatGate: gate)
+    }
+
+    private func markScreenSwitch() {
+        Perf.signposter.emitEvent("screen switch")
+        let interval = Perf.signposter.beginInterval("screen switch")
+        DispatchQueue.main.async { Perf.signposter.endInterval("screen switch", interval) }
     }
 
     /// Points the store at the selected worker, or clears it when none is selected or the project has no folder.
